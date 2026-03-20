@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AutoDine AI</title>
+  <title>AutoDine AI - Retro Edition</title>
   
   <!-- Load Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -16,55 +16,81 @@
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
   <style>
-    body { margin: 0; font-family: system-ui, -apple-system, sans-serif; }
+    @import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+    
+    body { 
+      margin: 0; 
+      font-family: 'Space Mono', monospace; 
+      background-color: #e2e8f0; /* slate-200 */
+      background-image: 
+        linear-gradient(#cbd5e1 1px, transparent 1px),
+        linear-gradient(90deg, #cbd5e1 1px, transparent 1px);
+      background-size: 30px 30px;
+    }
+
+    .retro-shadow {
+      box-shadow: 6px 6px 0px 0px rgba(0,0,0,1);
+    }
+    .retro-shadow-sm {
+      box-shadow: 3px 3px 0px 0px rgba(0,0,0,1);
+    }
+    .retro-btn:active {
+      transform: translate(4px, 4px);
+      box-shadow: 0px 0px 0px 0px rgba(0,0,0,1);
+    }
+
+    /* Retro Slider Styling */
+    input[type=range] {
+      -webkit-appearance: none;
+      width: 100%;
+      background: transparent;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      height: 24px;
+      width: 24px;
+      border: 4px solid black;
+      background: #fde047; /* yellow-300 */
+      cursor: pointer;
+      margin-top: -8px;
+    }
+    input[type=range]::-webkit-slider-runnable-track {
+      width: 100%;
+      height: 8px;
+      cursor: pointer;
+      background: black;
+    }
+
     .animate-fade-in { animation: fadeIn 0.3s ease-in-out; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-    .shimmer {
-      background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-      background-size: 200% 100%;
-      animation: shimmer 1.5s infinite;
-    }
-    @keyframes shimmer {
-      0% { background-position: 200% 0; }
-      100% { background-position: -200% 0; }
-    }
   </style>
 </head>
-<body class="bg-slate-100 dark:bg-slate-900">
+<body class="text-slate-900 pb-16">
   <div id="root"></div>
 
   <script type="text/babel">
-    const { useState, useEffect } = React;
+    const { useState, useEffect, useMemo } = React;
 
-    // --- Icons ---
-    const Activity = ({size=24, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>;
-    const Utensils = ({size=24, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"></path><path d="M7 2v20"></path><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"></path></svg>;
-    const Brain = ({size=24, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"></path><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"></path><path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4"></path><path d="M17.599 6.5a3 3 0 0 0 .399-1.375"></path><path d="M6.003 5.125A3 3 0 0 0 6.401 6.5"></path><path d="M3.477 10.896a4 4 0 0 1 .585-.396"></path><path d="M19.938 10.5a4 4 0 0 1 .585.396"></path><path d="M6 18a4 4 0 0 1-1.967-.516"></path><path d="M19.967 17.484A4 4 0 0 1 18 18"></path></svg>;
-    const CheckCircle2 = ({size=24, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg>;
-    const RefreshCw = ({size=24, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>;
-    const Trash2 = ({size=24, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" x2="10" y1="11" y2="17"></line><line x1="14" x2="14" y1="11" y2="17"></line></svg>;
-    const MapPin = ({size=24, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>;
-    const DollarSign = ({size=24, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="12" x2="12" y1="2" y2="22"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>;
-    const Info = ({size=24, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>;
-    const Newspaper = ({size=24, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"></path><path d="M18 14h-8"></path><path d="M15 18h-5"></path><path d="M10 6h8v4h-8V6Z"></path></svg>;
-    const Settings = ({size=24, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>;
-    const Lock = ({size=24, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>;
-    const Key = ({size=24, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m15.5 7.5 2.3 2.3a1 1 0 0 0 1.4 0l2.1-2.1a1 1 0 0 0 0-1.4L19 4"></path><path d="m21 2-9.6 9.6"></path><circle cx="7.5" cy="15.5" r="5.5"></circle></svg>;
-    const MapIcon = ({size=24, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"></polygon><line x1="9" x2="9" y1="3" y2="18"></line><line x1="15" x2="15" y1="6" y2="21"></line></svg>;
-    const Navigation = ({size=24, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="3 11 22 2 13 21 11 13 3 11"></polygon></svg>;
+    // --- Chunky Icons ---
+    const Utensils = ({size=24, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="square" strokeLinejoin="miter" className={className}><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"></path><path d="M7 2v20"></path><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"></path></svg>;
+    const Brain = ({size=24, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="square" strokeLinejoin="miter" className={className}><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"></path><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"></path><path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4"></path><path d="M17.599 6.5a3 3 0 0 0 .399-1.375"></path><path d="M6.003 5.125A3 3 0 0 0 6.401 6.5"></path><path d="M3.477 10.896a4 4 0 0 1 .585-.396"></path><path d="M19.938 10.5a4 4 0 0 1 .585.396"></path><path d="M6 18a4 4 0 0 1-1.967-.516"></path><path d="M19.967 17.484A4 4 0 0 1 18 18"></path></svg>;
+    const CheckCircle2 = ({size=24, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="square" strokeLinejoin="miter" className={className}><polyline points="20 6 9 17 4 12"></polyline></svg>;
+    const RefreshCw = ({size=24, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="square" strokeLinejoin="miter" className={className}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>;
+    const Trash2 = ({size=24, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="square" strokeLinejoin="miter" className={className}><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>;
+    const MapPin = ({size=24, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="square" strokeLinejoin="miter" className={className}><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>;
+    const User = ({size=24, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="square" strokeLinejoin="miter" className={className}><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>;
+    const Book = ({size=24, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="square" strokeLinejoin="miter" className={className}><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"></path></svg>;
+    const Sparkles = ({size=24, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="square" strokeLinejoin="miter" className={className}><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"></path></svg>;
 
-    // Fetch with Retry and Enhanced Error Reporting
-    const fetchWithRetry = async (url, options, retries = 5) => {
-      const delays = [1000, 2000, 4000, 8000, 16000];
+    // Fetch with Retry
+    const fetchWithRetry = async (url, options, retries = 3) => {
+      const delays = [1000, 2000, 4000];
       for (let i = 0; i < retries; i++) {
         try {
           const response = await fetch(url, options);
           if (!response.ok) {
             const errorBody = await response.json().catch(() => ({}));
-            throw {
-              status: response.status,
-              message: errorBody.error?.message || response.statusText
-            };
+            throw { status: response.status, message: errorBody.error?.message || response.statusText };
           }
           return await response.json();
         } catch (error) {
@@ -78,27 +104,61 @@
       const [activeTab, setActiveTab] = useState('dashboard');
       const [apiKey, setApiKey] = useState(() => localStorage.getItem('nutrisync_api_key') || "");
       const [tempKey, setTempKey] = useState("");
-      const [profile] = useState(() => {
-        const saved = localStorage.getItem('nutrisync_profile');
-        return saved ? JSON.parse(saved) : { goalCalories: 2500, goalProtein: 150, goalCarbs: 250, goalFat: 80, dietPreference: 'Any' };
+      
+      // Personal Info State
+      const [profile, setProfile] = useState(() => {
+        const saved = localStorage.getItem('nutrisync_profile_v2');
+        return saved ? JSON.parse(saved) : { 
+          age: 30, weight: 160, height: 68, sex: 'male', 
+          activityLevel: 1.375, goal: 'maintain', dietPreference: 'Any', 
+          allergies: '' 
+        };
       });
+
+      // Meal Tuner State
+      const [priceLevel, setPriceLevel] = useState('2');
+      const [healthLevel, setHealthLevel] = useState('3');
+
       const [meals, setMeals] = useState(() => {
         const saved = localStorage.getItem('nutrisync_meals');
         return saved ? JSON.parse(saved) : [];
       });
-      const [fitnessData, setFitnessData] = useState(() => {
-        const saved = localStorage.getItem('nutrisync_fitness');
-        return saved ? JSON.parse(saved) : { steps: 0, caloriesBurned: 0, activeMinutes: 0, lastSynced: null };
-      });
+
       const [aiLoading, setAiLoading] = useState(false);
-      const [loadingStep, setLoadingStep] = useState('');
       const [currentRecommendation, setCurrentRecommendation] = useState(null);
       const [aiError, setAiError] = useState('');
       const [userLocation, setUserLocation] = useState(null);
 
       useEffect(() => { localStorage.setItem('nutrisync_meals', JSON.stringify(meals)); }, [meals]);
-      useEffect(() => { localStorage.setItem('nutrisync_fitness', JSON.stringify(fitnessData)); }, [fitnessData]);
+      useEffect(() => { localStorage.setItem('nutrisync_profile_v2', JSON.stringify(profile)); }, [profile]);
 
+      // --- Smart Calorie & Macro Calculator ---
+      const goals = useMemo(() => {
+        const weightKg = profile.weight * 0.453592;
+        const heightCm = profile.height * 2.54;
+        
+        // Mifflin-St Jeor Equation for BMR
+        let bmr = (10 * weightKg) + (6.25 * heightCm) - (5 * profile.age);
+        bmr = profile.sex === 'male' ? bmr + 5 : bmr - 161;
+
+        // TDEE (Total Daily Energy Expenditure)
+        let tdee = bmr * Number(profile.activityLevel);
+
+        // Adjust for goals
+        if (profile.goal === 'lose') tdee -= 500;
+        if (profile.goal === 'build') tdee += 300;
+
+        const goalCalories = Math.round(tdee);
+        
+        // Generalized Macro Split for Retro App (30% Pro, 40% Carb, 30% Fat)
+        const goalProtein = Math.round((goalCalories * 0.30) / 4);
+        const goalCarbs = Math.round((goalCalories * 0.40) / 4);
+        const goalFat = Math.round((goalCalories * 0.30) / 9);
+
+        return { calories: goalCalories, protein: goalProtein, carbs: goalCarbs, fat: goalFat };
+      }, [profile]);
+
+      // Calculate what has been eaten
       const totals = meals.reduce((acc, meal) => ({
         calories: acc.calories + (Number(meal.calories) || 0),
         protein: acc.protein + (Number(meal.protein) || 0),
@@ -106,9 +166,9 @@
         fat: acc.fat + (Number(meal.fat) || 0),
       }), { calories: 0, protein: 0, carbs: 0, fat: 0 });
 
-      const adjustedCalorieGoal = profile.goalCalories + (fitnessData.caloriesBurned || 0);
-      const remainingCalories = Math.max(0, adjustedCalorieGoal - totals.calories);
+      const remainingCalories = Math.max(0, goals.calories - totals.calories);
 
+      // --- Handlers ---
       const saveApiKey = (e) => {
         e.preventDefault();
         localStorage.setItem('nutrisync_api_key', tempKey);
@@ -121,81 +181,67 @@
         setApiKey("");
       };
 
-      const handleDeleteMeal = (id) => {
-        setMeals(meals.filter(m => m.id !== id));
-      };
-
-      const syncSmartWatch = () => {
-        const simulatedSteps = Math.floor(Math.random() * 5000) + 3000;
-        const simulatedCals = Math.floor(simulatedSteps * 0.04);
-        setFitnessData({
-          steps: fitnessData.steps + simulatedSteps,
-          caloriesBurned: fitnessData.caloriesBurned + simulatedCals,
-          activeMinutes: fitnessData.activeMinutes + Math.floor(Math.random() * 30) + 10,
-          lastSynced: new Date().toLocaleTimeString()
-        });
-      };
-
       const logRecommendedMeal = () => {
         if (!currentRecommendation) return;
-        const newMeal = {
+        setMeals([{
           id: Date.now(),
           name: `${currentRecommendation.restaurant}: ${currentRecommendation.mealName}`,
-          type: 'Auto-Logged',
           calories: currentRecommendation.calories,
           protein: currentRecommendation.protein,
           carbs: currentRecommendation.carbs,
           fat: currentRecommendation.fat,
-          price: currentRecommendation.estimatedPrice
-        };
-        setMeals([newMeal, ...meals]);
+        }, ...meals]);
         setCurrentRecommendation(null);
       };
 
       const generateMealPlan = async () => {
         if (!apiKey) {
-          setActiveTab('settings');
+          setActiveTab('profile');
           return;
         }
 
         setAiLoading(true);
         setAiError('');
         setCurrentRecommendation(null);
-        setLoadingStep('Locating you...');
 
         let locationContext = "Location access denied. Suggest a universally common restaurant chain.";
-        let currentLat = null;
-        let currentLon = null;
-
-        // Attempt to get user location
         try {
           const pos = await new Promise((resolve, reject) => {
             navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 8000 });
           });
-          currentLat = pos.coords.latitude;
-          currentLon = pos.coords.longitude;
-          setUserLocation({ lat: currentLat, lon: currentLon });
-          locationContext = `The user is currently at coordinates: Latitude ${currentLat}, Longitude ${currentLon}. Suggest a popular restaurant chain that is highly likely to have a location near these coordinates.`;
+          setUserLocation({ lat: pos.coords.latitude, lon: pos.coords.longitude });
+          locationContext = `The user is currently at coordinates: Latitude ${pos.coords.latitude}, Longitude ${pos.coords.longitude}. Find a real restaurant near these coordinates.`;
         } catch (err) {
-          console.warn("Location not provided: ", err);
+          console.warn("Location not provided.");
           setUserLocation(null);
         }
 
-        setLoadingStep('Consulting AI...');
+        const priceLabel = priceLevel === '1' ? 'Cheap/Fast Food ($)' : priceLevel === '2' ? 'Moderate/Fast Casual ($$)' : 'Expensive/Sit-down ($$$)';
+        const healthLabel = healthLevel === '1' ? 'Indulgent/Cheat Meal (Prioritize taste and calories over macros)' : healthLevel === '2' ? 'Balanced (Good macros, decent taste)' : 'Ultra Clean/Super Healthy (Prioritize micronutrients and perfect macros)';
 
         const prompt = `
-          You are an expert culinary AI and dietary assistant. Suggest ONE specific, highly nutritious meal combination from a real restaurant. 
-          CRITICAL INSTRUCTION: VARY YOUR RECOMMENDATIONS widely! Do NOT just suggest Chipotle, Sweetgreen, or Cava every time. Broaden the horizon to include a diverse variety of cuisines (e.g., Mediterranean joints, Sushi/Japanese, healthy Thai, Indian, local health cafes, upscale grills, or diverse chains like True Food Kitchen, Nando's, etc.).
-          User status: ${remainingCalories} kcal left to eat today, ${fitnessData.caloriesBurned} kcal exercise burned today.
-          User preference: ${profile.dietPreference}.
-          Location Context: ${locationContext}
-          Also provide a dedicated section with the latest nutritional science or news explaining why the specific ingredients in this meal are highly beneficial for the user right now given their activity levels and remaining macro needs.
+          You are a brutally honest, expert AI Dietician. 
+          Suggest ONE specific, highly nutritious meal combination from a real restaurant. 
+          CRITICAL: VARY YOUR RECOMMENDATIONS widely! Include diverse cuisines (Mediterranean, Sushi, healthy Thai, Indian, local health cafes, upscale grills, Nando's, etc.). DO NOT default to Chipotle.
+          
+          User Profile:
+          - Needs: ${remainingCalories} kcal left today.
+          - Goal: ${profile.goal}
+          - Diet Preference: ${profile.dietPreference}
+          - ALLERGIES: ${profile.allergies || 'None'}. CRITICAL: DO NOT SUGGEST ANY INGREDIENT LISTED HERE! THIS IS LIFE OR DEATH.
+          - Location Context: ${locationContext}
+          
+          Meal Tuner Constraints:
+          - Desired Price Range: ${priceLabel}
+          - Health/Indulgence Focus: ${healthLabel}
+          
+          Provide the restaurant, exact order, macros, and a "hype text" explaining why this meal perfectly matches their Tuner constraints, hits their macros, and avoids their allergies.
         `;
 
         try {
           const payload = {
             contents: [{ parts: [{ text: prompt }] }],
-            systemInstruction: { parts: [{ text: "You are an autonomous food ordering AI. You must return only valid JSON." }] },
+            systemInstruction: { parts: [{ text: "You must return only valid JSON." }] },
             generationConfig: {
               responseMimeType: "application/json",
               responseSchema: {
@@ -209,15 +255,13 @@
                   carbs: { type: "NUMBER" },
                   fat: { type: "NUMBER" },
                   estimatedPrice: { type: "STRING" },
-                  reasoning: { type: "STRING" },
-                  healthNewsAndBenefits: { type: "STRING" }
+                  hypeText: { type: "STRING", description: "Enthusiastic text explaining why this meal is perfect for their goals and safely avoids their allergies." }
                 },
-                required: ["restaurant", "mealName", "orderInstructions", "calories", "protein", "carbs", "fat", "estimatedPrice", "reasoning", "healthNewsAndBenefits"]
+                required: ["restaurant", "mealName", "orderInstructions", "calories", "protein", "carbs", "fat", "estimatedPrice", "hypeText"]
               }
             }
           };
 
-          // Switching to the standard, stable Gemini 2.5 Flash model
           const modelName = "gemini-2.5-flash";
           const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
           
@@ -234,41 +278,32 @@
             throw new Error("Received empty response from the AI model.");
           }
         } catch (err) {
-          const msg = err.message || "Unknown error occurred.";
-          const status = err.status ? `(Status ${err.status})` : "";
-          setAiError(`API Error ${status}: ${msg}`);
-          console.error("Full AI Error Context:", err);
+          setAiError(`API Error: ${err.message || "Ensure your API key is correct."}`);
         } finally {
           setAiLoading(false);
         }
       };
 
-      if (!apiKey && activeTab !== 'settings') {
+      if (!apiKey && activeTab !== 'profile') {
         return (
-          <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl text-center">
-              <div className="bg-indigo-100 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 text-indigo-600">
-                <Lock size={32} />
-              </div>
-              <h2 className="text-2xl font-bold text-slate-900 mb-2">Autonomous Assistant</h2>
-              <p className="text-slate-500 mb-8 text-sm leading-relaxed">Provide your Gemini API Key to enable the AI coach. Your key is stored locally in your browser cache only.</p>
+          <div className="min-h-screen flex items-center justify-center p-4">
+            <div className="bg-white border-4 border-black p-8 max-w-md w-full retro-shadow text-center">
+              <Sparkles size={48} className="mx-auto mb-6 text-indigo-500" />
+              <h2 className="text-2xl font-black mb-4 uppercase tracking-tighter">Insert Coin <br/> (API Key)</h2>
+              <p className="text-sm font-bold mb-8">Unlock the Retro AI Assistant.</p>
               
               <form onSubmit={saveApiKey} className="space-y-4">
-                <div className="relative">
-                  <Key className="absolute left-3 top-3.5 text-slate-400" size={18} />
-                  <input 
-                    type="password"
-                    placeholder="Enter Gemini API Key..."
-                    value={tempKey}
-                    onChange={(e) => setTempKey(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none"
-                    required
-                  />
-                </div>
-                <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg active:scale-95">
-                  Unlock AI Assistant
+                <input 
+                  type="password"
+                  placeholder="Paste Gemini Key..."
+                  value={tempKey}
+                  onChange={(e) => setTempKey(e.target.value)}
+                  className="w-full px-4 py-3 border-4 border-black bg-yellow-50 focus:bg-yellow-100 outline-none font-bold"
+                  required
+                />
+                <button type="submit" className="w-full bg-cyan-400 border-4 border-black font-black py-4 uppercase retro-shadow retro-btn transition-all">
+                  Start Game
                 </button>
-                <p className="text-xs text-slate-400 mt-2 italic">Requires Gemini 2.5 Flash access.</p>
               </form>
             </div>
           </div>
@@ -276,143 +311,138 @@
       }
 
       return (
-        <div className="min-h-screen bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans text-left pb-10">
-          <header className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10">
-            <div className="max-w-3xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="bg-indigo-600 p-2 rounded-lg text-white">
-                  <Brain size={20} />
-                </div>
-                <h1 className="text-xl font-bold tracking-tight">AutoDine AI</h1>
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-8">
+          {/* Header */}
+          <header className="bg-white border-4 border-black retro-shadow p-4 mb-8 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="bg-yellow-400 border-2 border-black p-2">
+                <Brain size={24} />
               </div>
-              <div className="flex space-x-2">
-                {['dashboard', 'history', 'settings'].map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className={`p-2.5 rounded-full transition-all ${
-                      activeTab === tab 
-                        ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400' 
-                        : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'
-                    }`}
-                  >
-                    {tab === 'dashboard' ? <Utensils size={20}/> : tab === 'history' ? <Activity size={20}/> : <Settings size={20}/>}
-                  </button>
-                ))}
-              </div>
+              <h1 className="text-xl md:text-2xl font-black uppercase tracking-tighter">AutoDine.EXE</h1>
             </div>
           </header>
 
-          <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
-            {activeTab === 'dashboard' && (
-              <div className="space-y-6 animate-fade-in">
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <div className="flex-1 bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
-                    <div className="flex justify-between items-center mb-4">
-                      <span className="text-sm font-medium text-slate-500 uppercase tracking-widest">Budget Remaining</span>
-                      <span className="text-3xl font-black text-indigo-600 dark:text-indigo-400">{remainingCalories} <span className="text-sm font-medium text-slate-400">kcal</span></span>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="text-center bg-slate-50 dark:bg-slate-900/40 p-2 rounded-xl">
-                        <p className="text-[10px] uppercase font-bold text-slate-400">P</p>
-                        <p className="font-bold text-sm">{totals.protein} / {profile.goalProtein}g</p>
-                      </div>
-                      <div className="text-center bg-slate-50 dark:bg-slate-900/40 p-2 rounded-xl">
-                        <p className="text-[10px] uppercase font-bold text-slate-400">C</p>
-                        <p className="font-bold text-sm">{totals.carbs} / {profile.goalCarbs}g</p>
-                      </div>
-                      <div className="text-center bg-slate-50 dark:bg-slate-900/40 p-2 rounded-xl">
-                        <p className="text-[10px] uppercase font-bold text-slate-400">F</p>
-                        <p className="font-bold text-sm">{totals.fat} / {profile.goalFat}g</p>
-                      </div>
-                    </div>
-                  </div>
+          {/* Nav Tabs */}
+          <div className="flex gap-2 mb-8 overflow-x-auto pb-2">
+            {[
+              { id: 'dashboard', icon: Utensils, label: 'EAT' },
+              { id: 'history', icon: Book, label: 'LOG' },
+              { id: 'profile', icon: User, label: 'PROFILE' }
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 border-4 border-black font-black uppercase transition-all retro-btn
+                  ${activeTab === tab.id ? 'bg-indigo-500 text-white retro-shadow' : 'bg-white text-black hover:bg-slate-100'}`}
+              >
+                <tab.icon size={18} /> <span className="hidden sm:inline">{tab.label}</span>
+              </button>
+            ))}
+          </div>
 
-                  <div className="sm:w-48 bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col justify-center items-center relative">
-                    <button onClick={syncSmartWatch} className="absolute top-2 right-2 text-slate-300 hover:text-indigo-500 transition-colors"><RefreshCw size={14}/></button>
-                    <Activity className="text-rose-500 mb-1" size={24} />
-                    <span className="text-3xl font-black">{fitnessData.caloriesBurned}</span>
-                    <span className="text-[10px] text-slate-400 uppercase font-bold text-center">Exercise<br/>Burned</span>
+          <main>
+            {/* --- DASHBOARD TAB --- */}
+            {activeTab === 'dashboard' && (
+              <div className="space-y-8 animate-fade-in">
+                
+                {/* Stats Screen */}
+                <div className="bg-white border-4 border-black retro-shadow p-6">
+                  <div className="flex justify-between items-end border-b-4 border-black pb-4 mb-4">
+                    <h2 className="text-sm font-black uppercase">Fuel Remaining</h2>
+                    <span className="text-4xl font-black text-indigo-600">{remainingCalories}</span>
+                  </div>
+                  
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="border-2 border-black bg-indigo-100 p-2 text-center">
+                      <p className="text-xs font-black uppercase">PRO</p>
+                      <p className="font-bold text-sm">{totals.protein}/{goals.protein}g</p>
+                    </div>
+                    <div className="border-2 border-black bg-yellow-100 p-2 text-center">
+                      <p className="text-xs font-black uppercase">CRB</p>
+                      <p className="font-bold text-sm">{totals.carbs}/{goals.carbs}g</p>
+                    </div>
+                    <div className="border-2 border-black bg-lime-100 p-2 text-center">
+                      <p className="text-xs font-black uppercase">FAT</p>
+                      <p className="font-bold text-sm">{totals.fat}/{goals.fat}g</p>
+                    </div>
                   </div>
                 </div>
 
+                {/* Meal Tuner & AI Recommender */}
                 {!currentRecommendation ? (
-                  <div className="bg-indigo-600 rounded-3xl p-10 text-center shadow-xl text-white relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-4 opacity-10"><Brain size={120}/></div>
-                    <h2 className="text-3xl font-black mb-4">Deciding What's Next?</h2>
-                    <p className="text-indigo-100 mb-8 max-w-sm mx-auto">Click below to let Gemini analyze your current nutrient gaps, burned calories, and location to suggest the perfect meal nearby.</p>
-                    <button 
-                      onClick={generateMealPlan}
-                      disabled={aiLoading}
-                      className="bg-white text-indigo-600 font-bold py-4 px-12 rounded-2xl shadow-lg hover:scale-105 transition-transform disabled:opacity-50 flex items-center gap-2 mx-auto active:scale-95"
-                    >
-                      {aiLoading ? <><RefreshCw size={20} className="animate-spin" /> {loadingStep}</> : <><MapPin size={20}/> Find My Next Meal</>}
-                    </button>
-                    {aiError && <p className="mt-6 text-red-200 text-sm bg-red-500/20 p-4 rounded-xl border border-red-500/30 break-words">{aiError}</p>}
-                  </div>
-                ) : (
-                  <div className="bg-white dark:bg-slate-800 rounded-3xl overflow-hidden shadow-xl border border-slate-200 dark:border-slate-700 animate-fade-in">
-                    <div className="bg-indigo-600 p-6 text-white flex justify-between items-start">
-                      <div>
-                        <p className="text-xs font-bold uppercase tracking-widest opacity-80 flex items-center gap-1 mb-1"><MapPin size={14}/> {currentRecommendation.restaurant}</p>
-                        <h2 className="text-2xl font-black">{currentRecommendation.mealName}</h2>
-                      </div>
-                      <div className="bg-white/20 px-3 py-1 rounded-lg font-bold flex items-center gap-1">
-                        <DollarSign size={14}/>{currentRecommendation.estimatedPrice.replace('$', '')}
+                  <div className="space-y-8">
+                    {/* The Meal Tuner */}
+                    <div className="bg-white border-4 border-black retro-shadow p-6">
+                      <h3 className="text-lg font-black uppercase mb-6 flex items-center gap-2">
+                        <Sparkles size={18} className="text-yellow-500"/> Meal Tuner
+                      </h3>
+                      <div className="space-y-6">
+                        <div>
+                          <div className="flex justify-between text-xs font-black uppercase mb-4">
+                            <span>Price Level</span>
+                            <span className="text-indigo-600">{priceLevel === '1' ? '$ (Cheap)' : priceLevel === '2' ? '$$ (Moderate)' : '$$$ (Splurge)'}</span>
+                          </div>
+                          <input type="range" min="1" max="3" value={priceLevel} onChange={e => setPriceLevel(e.target.value)} />
+                        </div>
+                        <div>
+                          <div className="flex justify-between text-xs font-black uppercase mb-4 mt-6">
+                            <span>Health Focus</span>
+                            <span className="text-lime-600">{healthLevel === '1' ? 'Cheat Meal' : healthLevel === '2' ? 'Balanced' : 'Ultra Clean'}</span>
+                          </div>
+                          <input type="range" min="1" max="3" value={healthLevel} onChange={e => setHealthLevel(e.target.value)} />
+                        </div>
                       </div>
                     </div>
-                    <div className="p-8">
-                      <div className="bg-slate-50 dark:bg-slate-900 p-6 rounded-2xl mb-6 border border-slate-100 dark:border-slate-800">
-                        <p className="text-xs font-bold text-slate-400 uppercase mb-2 flex items-center gap-1"><Info size={14}/> Exact Ordering Instructions</p>
-                        <p className="text-xl font-medium leading-relaxed italic">"{currentRecommendation.orderInstructions}"</p>
+
+                    <div className="bg-cyan-400 border-4 border-black retro-shadow p-8 text-center">
+                      <h2 className="text-2xl font-black mb-4 uppercase">Feed Me AI</h2>
+                      <p className="font-bold text-sm mb-8 text-black/80">Scanning local coordinates and bypassing allergies to find optimal fuel.</p>
+                      <button 
+                        onClick={generateMealPlan}
+                        disabled={aiLoading}
+                        className="bg-yellow-400 border-4 border-black font-black py-4 px-8 w-full uppercase retro-shadow-sm retro-btn transition-all flex justify-center items-center gap-2 disabled:opacity-50"
+                      >
+                        {aiLoading ? <><RefreshCw size={20} className="animate-spin" /> Processing...</> : "Generate Meal"}
+                      </button>
+                      {aiError && <p className="mt-4 bg-black text-red-400 p-3 font-bold text-xs uppercase border-2 border-red-500">{aiError}</p>}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-white border-4 border-black retro-shadow overflow-hidden animate-fade-in">
+                    <div className="bg-black text-white p-4 flex justify-between items-center border-b-4 border-black">
+                      <div className="font-black uppercase flex items-center gap-2">
+                        <MapPin size={16} className="text-lime-400"/> {currentRecommendation.restaurant}
+                      </div>
+                      <div className="bg-lime-400 text-black px-2 py-1 font-black text-xs border-2 border-white">
+                        {currentRecommendation.estimatedPrice}
+                      </div>
+                    </div>
+                    
+                    <div className="p-6">
+                      <h2 className="text-2xl font-black mb-4 uppercase leading-tight">{currentRecommendation.mealName}</h2>
+                      
+                      <div className="bg-yellow-100 border-4 border-black p-4 mb-6">
+                        <p className="text-xs font-black uppercase mb-2 text-yellow-800">Say This Exactly:</p>
+                        <p className="font-bold italic">"{currentRecommendation.orderInstructions}"</p>
                       </div>
                       
-                      <div className="grid grid-cols-4 gap-4 mb-8">
-                         <div className="text-center"><p className="text-xs text-slate-400 font-bold">Kcal</p><p className="font-black text-xl">{currentRecommendation.calories}</p></div>
-                         <div className="text-center"><p className="text-xs text-slate-400 font-bold">Pro</p><p className="font-black text-xl text-rose-500">{currentRecommendation.protein}g</p></div>
-                         <div className="text-center"><p className="text-xs text-slate-400 font-bold">Carb</p><p className="font-black text-xl text-amber-500">{currentRecommendation.carbs}g</p></div>
-                         <div className="text-center"><p className="text-xs text-slate-400 font-bold">Fat</p><p className="font-black text-xl text-emerald-500">{currentRecommendation.fat}g</p></div>
+                      <div className="grid grid-cols-4 gap-2 mb-6 text-center">
+                         <div className="border-2 border-black bg-slate-100"><p className="text-[10px] font-black border-b-2 border-black bg-slate-200">KCAL</p><p className="font-black py-1">{currentRecommendation.calories}</p></div>
+                         <div className="border-2 border-black bg-indigo-100"><p className="text-[10px] font-black border-b-2 border-black bg-indigo-200">PRO</p><p className="font-black py-1">{currentRecommendation.protein}</p></div>
+                         <div className="border-2 border-black bg-cyan-100"><p className="text-[10px] font-black border-b-2 border-black bg-cyan-200">CRB</p><p className="font-black py-1">{currentRecommendation.carbs}</p></div>
+                         <div className="border-2 border-black bg-lime-100"><p className="text-[10px] font-black border-b-2 border-black bg-lime-200">FAT</p><p className="font-black py-1">{currentRecommendation.fat}</p></div>
                       </div>
 
-                      <div className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-2xl mb-8 border border-blue-100 dark:border-blue-800/50">
-                        <p className="text-xs font-bold text-blue-500 uppercase mb-3 flex items-center gap-1 tracking-wider">
-                          <Newspaper size={14}/> Nutritional Science & News
-                        </p>
-                        <p className="text-sm text-blue-900 dark:text-blue-200 leading-relaxed font-medium">
-                          {currentRecommendation.healthNewsAndBenefits}
-                        </p>
+                      <div className="bg-black text-white p-4 border-4 border-white outline outline-4 outline-black mb-6">
+                        <p className="text-xs font-black uppercase mb-2 text-cyan-400">AI Analysis:</p>
+                        <p className="text-sm font-bold leading-relaxed">{currentRecommendation.hypeText}</p>
                       </div>
 
-                      {/* --- Navigation & Maps Section --- */}
-                      <div className="mb-8">
-                        <p className="text-xs font-bold text-slate-400 uppercase mb-3 flex items-center gap-1">
-                          <MapIcon size={14}/> Nearest Location
-                        </p>
-                        <div className="rounded-2xl overflow-hidden shadow-sm border border-slate-200 dark:border-slate-700 mb-3 bg-slate-100 dark:bg-slate-800">
-                          <iframe 
-                            width="100%" 
-                            height="200" 
-                            style={{ border: 0 }} 
-                            loading="lazy" 
-                            allowFullScreen 
-                            src={`https://maps.google.com/maps?q=${encodeURIComponent(currentRecommendation.restaurant)}${userLocation ? `+near+${userLocation.lat},${userLocation.lon}` : ''}&t=&z=14&ie=UTF8&iwloc=&output=embed`}
-                          ></iframe>
-                        </div>
-                        <a 
-                          href={`https://www.google.com/maps/dir/?api=1${userLocation ? `&origin=${userLocation.lat},${userLocation.lon}` : ''}&destination=${encodeURIComponent(currentRecommendation.restaurant)}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="w-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-colors active:scale-95"
-                        >
-                          <Navigation size={18}/> Open Directions in Google Maps
-                        </a>
-                      </div>
-
-                      <div className="flex flex-col sm:flex-row gap-3">
-                        <button onClick={logRecommendedMeal} className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2 shadow-md transition-colors active:scale-95">
-                          <CheckCircle2 size={20}/> Confirm Consumption (Log It)
+                      <div className="flex flex-col sm:flex-row gap-4">
+                        <button onClick={logRecommendedMeal} className="flex-1 bg-lime-400 border-4 border-black text-black font-black uppercase py-4 retro-shadow-sm retro-btn transition-all flex justify-center items-center gap-2">
+                          <CheckCircle2 size={20}/> Log It
                         </button>
-                        <button onClick={generateMealPlan} className="bg-slate-100 dark:bg-slate-700 px-8 py-4 rounded-2xl font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition-colors active:scale-95">
+                        <button onClick={() => setCurrentRecommendation(null)} className="bg-white border-4 border-black text-black font-black uppercase py-4 px-6 retro-shadow-sm retro-btn transition-all">
                           Skip
                         </button>
                       </div>
@@ -422,54 +452,112 @@
               </div>
             )}
 
+            {/* --- HISTORY TAB --- */}
             {activeTab === 'history' && (
               <div className="space-y-4 animate-fade-in">
-                <h2 className="text-xl font-black mb-4 px-2 tracking-tight">Daily Meal Log</h2>
+                <h2 className="text-xl font-black uppercase bg-black text-white p-3 inline-block border-2 border-black shadow-[4px_4px_0px_0px_rgba(255,255,255,1)] outline outline-2 outline-black mb-4">Meal Log</h2>
                 {meals.length === 0 ? (
-                  <div className="text-center py-20 text-slate-400 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-3xl">
-                    <Utensils size={40} className="mx-auto mb-4 opacity-20"/>
-                    <p className="font-medium">No meals logged today yet.</p>
+                  <div className="bg-white border-4 border-black p-8 text-center border-dashed">
+                    <p className="font-black uppercase">NO DATA FOUND.</p>
                   </div>
                 ) : (
                   meals.map(meal => (
-                    <div key={meal.id} className="bg-white dark:bg-slate-800 p-5 rounded-2xl flex justify-between items-center shadow-sm border border-slate-100 dark:border-slate-700">
+                    <div key={meal.id} className="bg-white border-4 border-black retro-shadow p-4 flex justify-between items-center">
                       <div>
-                        <p className="font-bold text-slate-800 dark:text-slate-200">{meal.name}</p>
-                        <p className="text-xs text-slate-500 mt-1 font-semibold">
-                          {meal.calories} kcal • {meal.protein}g P • {meal.carbs}g C • {meal.fat}g F
+                        <p className="font-black uppercase text-lg leading-tight">{meal.name}</p>
+                        <p className="text-xs font-bold mt-1 bg-yellow-200 inline-block px-2 border-2 border-black">
+                          {meal.calories} KCAL
                         </p>
                       </div>
-                      <button onClick={() => handleDeleteMeal(meal.id)} className="text-slate-300 hover:text-red-500 p-2 transition-colors"><Trash2 size={18}/></button>
+                      <button onClick={() => handleDeleteMeal(meal.id)} className="bg-red-400 text-white border-2 border-black p-2 retro-btn transition-all"><Trash2 size={20}/></button>
                     </div>
                   ))
                 )}
               </div>
             )}
 
-            {activeTab === 'settings' && (
-              <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 shadow-sm border border-slate-200 dark:border-slate-700 animate-fade-in">
-                <h2 className="text-2xl font-black mb-6 tracking-tight">Profile Settings</h2>
-                <div className="space-y-8">
-                  <div>
-                    <label className="block text-xs font-bold uppercase text-slate-400 mb-3 tracking-widest">Model Information</label>
-                    <div className="p-4 bg-slate-50 dark:bg-slate-900/60 rounded-2xl flex items-center gap-3 mb-4">
-                      <Brain size={20} className="text-indigo-500" />
-                      <div>
-                        <p className="text-sm font-bold">Gemini 2.5 Flash (Stable)</p>
-                        <p className="text-[10px] text-slate-500">Active Identifier: gemini-2.5-flash</p>
-                      </div>
+            {/* --- PROFILE / SETTINGS TAB --- */}
+            {activeTab === 'profile' && (
+              <div className="bg-white border-4 border-black retro-shadow p-6 sm:p-8 animate-fade-in">
+                <h2 className="text-2xl font-black uppercase mb-6 border-b-4 border-black pb-2">Player Profile</h2>
+                
+                <div className="space-y-6">
+                  {/* Stats Row 1 */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div>
+                      <label className="block text-xs font-black uppercase mb-1">Age</label>
+                      <input type="number" value={profile.age} onChange={e => setProfile({...profile, age: e.target.value})} className="w-full border-4 border-black p-2 font-bold bg-slate-50 outline-none focus:bg-yellow-100" />
                     </div>
-                    <label className="block text-xs font-bold uppercase text-slate-400 mb-3 tracking-widest">API Authentication</label>
+                    <div>
+                      <label className="block text-xs font-black uppercase mb-1">Wt (lbs)</label>
+                      <input type="number" value={profile.weight} onChange={e => setProfile({...profile, weight: e.target.value})} className="w-full border-4 border-black p-2 font-bold bg-slate-50 outline-none focus:bg-yellow-100" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-black uppercase mb-1">Ht (in)</label>
+                      <input type="number" value={profile.height} onChange={e => setProfile({...profile, height: e.target.value})} className="w-full border-4 border-black p-2 font-bold bg-slate-50 outline-none focus:bg-yellow-100" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-black uppercase mb-1">Sex</label>
+                      <select value={profile.sex} onChange={e => setProfile({...profile, sex: e.target.value})} className="w-full border-4 border-black p-2 font-bold bg-slate-50 outline-none focus:bg-yellow-100">
+                        <option value="male">Male</option>
+                        <option value="female">Female</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Goal & Activity */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-black uppercase mb-1">Goal</label>
+                      <select value={profile.goal} onChange={e => setProfile({...profile, goal: e.target.value})} className="w-full border-4 border-black p-2 font-bold bg-slate-50 outline-none focus:bg-yellow-100">
+                        <option value="lose">Lose Weight (Cut)</option>
+                        <option value="maintain">Maintain</option>
+                        <option value="build">Build Muscle (Bulk)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-black uppercase mb-1">Activity Level</label>
+                      <select value={profile.activityLevel} onChange={e => setProfile({...profile, activityLevel: e.target.value})} className="w-full border-4 border-black p-2 font-bold bg-slate-50 outline-none focus:bg-yellow-100">
+                        <option value="1.2">Sedentary (Desk Job)</option>
+                        <option value="1.375">Light (1-3 days/wk)</option>
+                        <option value="1.55">Moderate (3-5 days/wk)</option>
+                        <option value="1.725">Active (6-7 days/wk)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Diet & Allergies */}
+                  <div className="bg-red-50 border-4 border-red-500 p-4 relative">
+                    <span className="absolute -top-3 left-4 bg-red-500 text-white font-black text-[10px] px-2 uppercase border-2 border-black">Danger Zone</span>
+                    <label className="block text-xs font-black uppercase mb-1 text-red-900 mt-2">Allergies / Avoid (Comma Separated)</label>
+                    <textarea 
+                      value={profile.allergies} 
+                      onChange={e => setProfile({...profile, allergies: e.target.value})} 
+                      placeholder="e.g. Peanuts, Spinach, Shellfish"
+                      className="w-full border-4 border-black p-2 font-bold bg-white outline-none focus:bg-yellow-100 h-20 placeholder-slate-300" 
+                    />
+                    <p className="text-[10px] font-bold mt-1 text-red-600">AI will be strictly forbidden from suggesting these.</p>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-xs font-black uppercase mb-1">Diet Preference</label>
+                    <input type="text" value={profile.dietPreference} onChange={e => setProfile({...profile, dietPreference: e.target.value})} placeholder="e.g. Any, Vegan, Keto, Paleo" className="w-full border-4 border-black p-2 font-bold bg-slate-50 outline-none focus:bg-yellow-100" />
+                  </div>
+
+                  {/* API Key */}
+                  <div className="pt-6 border-t-4 border-black">
+                    <label className="block text-xs font-black uppercase mb-2">System Config: API Key</label>
                     <div className="flex gap-2">
                       <input 
                         type="password" 
                         value={apiKey ? "••••••••••••••••••••••••••••" : ""} 
                         disabled 
-                        className="flex-1 px-4 py-3 bg-slate-100 dark:bg-slate-700 rounded-xl outline-none text-slate-500"
+                        className="flex-1 px-4 py-2 bg-slate-200 border-4 border-black font-bold outline-none"
                       />
-                      <button onClick={clearApiKey} className="px-5 py-3 bg-red-50 text-red-600 rounded-xl font-bold hover:bg-red-100 transition-colors">Reset Key</button>
+                      <button onClick={clearApiKey} className="px-4 py-2 bg-black text-white font-black uppercase retro-btn border-4 border-black hover:bg-slate-800 transition-colors">Reset</button>
                     </div>
                   </div>
+
                 </div>
               </div>
             )}
