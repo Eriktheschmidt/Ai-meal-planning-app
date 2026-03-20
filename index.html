@@ -1,353 +1,402 @@
-import React, { useState, useEffect } from 'react';
-import { Activity, Utensils, Brain, CheckCircle2, RefreshCw, Trash2, MapPin, DollarSign, Info, Settings, Lock, Key } from 'lucide-react';
-
-// Exponential backoff helper for API calls
-const fetchWithRetry = async (url, options, retries = 5) => {
-  const delays = [1000, 2000, 4000, 8000, 16000];
-  for (let i = 0; i < retries; i++) {
-    try {
-      const response = await fetch(url, options);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      return await response.json();
-    } catch (error) {
-      if (i === retries - 1) throw error;
-      await new Promise(res => setTimeout(res, delays[i]));
-    }
-  }
-};
-
-export default function App() {
-  // --- State Management ---
-  const [activeTab, setActiveTab] = useState('dashboard');
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AutoDine AI</title>
   
-  // API Key Storage (Keeps key off GitHub)
-  const [apiKey, setApiKey] = useState(() => localStorage.getItem('nutrisync_api_key') || "");
-  const [tempKey, setTempKey] = useState("");
+  <!-- Load Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Load React and ReactDOM -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  
+  <!-- Load Babel to compile JSX in the browser -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-  // User Profile & Goals
-  const [profile] = useState(() => {
-    const saved = localStorage.getItem('nutrisync_profile');
-    return saved ? JSON.parse(saved) : { goalCalories: 2500, goalProtein: 150, goalCarbs: 250, goalFat: 80, dietPreference: 'Any' };
-  });
+  <style>
+    body { margin: 0; font-family: system-ui, -apple-system, sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-100 dark:bg-slate-900">
+  <div id="root"></div>
 
-  // Logged Meals
-  const [meals, setMeals] = useState(() => {
-    const saved = localStorage.getItem('nutrisync_meals');
-    return saved ? JSON.parse(saved) : [];
-  });
+  <script type="text/babel">
+    const { useState, useEffect } = React;
 
-  // Smartwatch / Fitness Data
-  const [fitnessData, setFitnessData] = useState(() => {
-    const saved = localStorage.getItem('nutrisync_fitness');
-    return saved ? JSON.parse(saved) : { steps: 0, caloriesBurned: 0, activeMinutes: 0, lastSynced: null };
-  });
+    // --- Inline Icons (Replaces lucide-react to prevent import errors) ---
+    const Activity = ({size=24, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>;
+    const Utensils = ({size=24, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"></path><path d="M7 2v20"></path><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"></path></svg>;
+    const Brain = ({size=24, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"></path><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"></path><path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4"></path><path d="M17.599 6.5a3 3 0 0 0 .399-1.375"></path><path d="M6.003 5.125A3 3 0 0 0 6.401 6.5"></path><path d="M3.477 10.896a4 4 0 0 1 .585-.396"></path><path d="M19.938 10.5a4 4 0 0 1 .585.396"></path><path d="M6 18a4 4 0 0 1-1.967-.516"></path><path d="M19.967 17.484A4 4 0 0 1 18 18"></path></svg>;
+    const CheckCircle2 = ({size=24, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg>;
+    const RefreshCw = ({size=24, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>;
+    const Trash2 = ({size=24, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" x2="10" y1="11" y2="17"></line><line x1="14" x2="14" y1="11" y2="17"></line></svg>;
+    const MapPin = ({size=24, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>;
+    const DollarSign = ({size=24, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="12" x2="12" y1="2" y2="22"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>;
+    const Info = ({size=24, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>;
+    const Settings = ({size=24, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>;
+    const Lock = ({size=24, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>;
+    const Key = ({size=24, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m15.5 7.5 2.3 2.3a1 1 0 0 0 1.4 0l2.1-2.1a1 1 0 0 0 0-1.4L19 4"></path><path d="m21 2-9.6 9.6"></path><circle cx="7.5" cy="15.5" r="5.5"></circle></svg>;
 
-  // Autonomous AI State
-  const [aiLoading, setAiLoading] = useState(false);
-  const [currentRecommendation, setCurrentRecommendation] = useState(null);
-  const [aiError, setAiError] = useState('');
-
-  // --- Effects ---
-  useEffect(() => { localStorage.setItem('nutrisync_meals', JSON.stringify(meals)); }, [meals]);
-  useEffect(() => { localStorage.setItem('nutrisync_fitness', JSON.stringify(fitnessData)); }, [fitnessData]);
-
-  // --- Derived Metrics ---
-  const totals = meals.reduce((acc, meal) => ({
-    calories: acc.calories + (Number(meal.calories) || 0),
-    protein: acc.protein + (Number(meal.protein) || 0),
-    carbs: acc.carbs + (Number(meal.carbs) || 0),
-    fat: acc.fat + (Number(meal.fat) || 0),
-  }), { calories: 0, protein: 0, carbs: 0, fat: 0 });
-
-  const adjustedCalorieGoal = profile.goalCalories + (fitnessData.caloriesBurned || 0);
-  const remainingCalories = adjustedCalorieGoal - totals.calories;
-
-  // --- Handlers ---
-  const saveApiKey = (e) => {
-    e.preventDefault();
-    localStorage.setItem('nutrisync_api_key', tempKey);
-    setApiKey(tempKey);
-  };
-
-  const clearApiKey = () => {
-    localStorage.removeItem('nutrisync_api_key');
-    setApiKey("");
-    setTempKey("");
-  };
-
-  const handleDeleteMeal = (id) => {
-    setMeals(meals.filter(m => m.id !== id));
-  };
-
-  const syncSmartWatch = () => {
-    const simulatedSteps = Math.floor(Math.random() * 5000) + 3000;
-    const simulatedCals = Math.floor(simulatedSteps * 0.04);
-    setFitnessData({
-      steps: fitnessData.steps + simulatedSteps,
-      caloriesBurned: fitnessData.caloriesBurned + simulatedCals,
-      activeMinutes: fitnessData.activeMinutes + Math.floor(Math.random() * 30) + 10,
-      lastSynced: new Date().toLocaleTimeString()
-    });
-  };
-
-  const logRecommendedMeal = () => {
-    if (!currentRecommendation) return;
-    const newMeal = {
-      id: Date.now(),
-      name: `${currentRecommendation.restaurant}: ${currentRecommendation.mealName}`,
-      type: 'Auto-Logged',
-      calories: currentRecommendation.calories,
-      protein: currentRecommendation.protein,
-      carbs: currentRecommendation.carbs,
-      fat: currentRecommendation.fat,
-      price: currentRecommendation.estimatedPrice
-    };
-    setMeals([newMeal, ...meals]);
-    setCurrentRecommendation(null);
-  };
-
-  const generateMealPlan = async () => {
-    if (!apiKey) {
-      setAiError("Please set your Gemini API key in settings first.");
-      setActiveTab('settings');
-      return;
-    }
-
-    setAiLoading(true);
-    setAiError('');
-    setCurrentRecommendation(null);
-
-    const prompt = `
-      Suggest ONE specific meal combination from a popular restaurant chain (Chipotle, Sweetgreen, etc.)
-      User status: ${remainingCalories} kcal left, ${fitnessData.caloriesBurned} kcal exercise burned.
-    `;
-
-    try {
-      const payload = {
-        contents: [{ parts: [{ text: prompt }] }],
-        systemInstruction: { parts: [{ text: "You are an autonomous food ordering AI. You must return only valid JSON." }] },
-        generationConfig: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: "OBJECT",
-            properties: {
-              restaurant: { type: "STRING" },
-              mealName: { type: "STRING" },
-              orderInstructions: { type: "STRING" },
-              calories: { type: "NUMBER" },
-              protein: { type: "NUMBER" },
-              carbs: { type: "NUMBER" },
-              fat: { type: "NUMBER" },
-              estimatedPrice: { type: "STRING" },
-              reasoning: { type: "STRING" }
-            },
-            required: ["restaurant", "mealName", "orderInstructions", "calories", "protein", "carbs", "fat", "estimatedPrice", "reasoning"]
+    // Exponential backoff helper for API calls
+    const fetchWithRetry = async (url, options, retries = 5) => {
+      const delays = [1000, 2000, 4000, 8000, 16000];
+      for (let i = 0; i < retries; i++) {
+        try {
+          const response = await fetch(url, options);
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
           }
+          return await response.json();
+        } catch (error) {
+          if (i === retries - 1) throw error;
+          await new Promise(res => setTimeout(res, delays[i]));
+        }
+      }
+    };
+
+    function App() {
+      // --- State Management ---
+      const [activeTab, setActiveTab] = useState('dashboard');
+      
+      // API Key Storage (Keeps key off GitHub)
+      const [apiKey, setApiKey] = useState(() => localStorage.getItem('nutrisync_api_key') || "");
+      const [tempKey, setTempKey] = useState("");
+
+      // User Profile & Goals
+      const [profile] = useState(() => {
+        const saved = localStorage.getItem('nutrisync_profile');
+        return saved ? JSON.parse(saved) : { goalCalories: 2500, goalProtein: 150, goalCarbs: 250, goalFat: 80, dietPreference: 'Any' };
+      });
+
+      // Logged Meals
+      const [meals, setMeals] = useState(() => {
+        const saved = localStorage.getItem('nutrisync_meals');
+        return saved ? JSON.parse(saved) : [];
+      });
+
+      // Smartwatch / Fitness Data
+      const [fitnessData, setFitnessData] = useState(() => {
+        const saved = localStorage.getItem('nutrisync_fitness');
+        return saved ? JSON.parse(saved) : { steps: 0, caloriesBurned: 0, activeMinutes: 0, lastSynced: null };
+      });
+
+      // Autonomous AI State
+      const [aiLoading, setAiLoading] = useState(false);
+      const [currentRecommendation, setCurrentRecommendation] = useState(null);
+      const [aiError, setAiError] = useState('');
+
+      // --- Effects ---
+      useEffect(() => { localStorage.setItem('nutrisync_meals', JSON.stringify(meals)); }, [meals]);
+      useEffect(() => { localStorage.setItem('nutrisync_fitness', JSON.stringify(fitnessData)); }, [fitnessData]);
+
+      // --- Derived Metrics ---
+      const totals = meals.reduce((acc, meal) => ({
+        calories: acc.calories + (Number(meal.calories) || 0),
+        protein: acc.protein + (Number(meal.protein) || 0),
+        carbs: acc.carbs + (Number(meal.carbs) || 0),
+        fat: acc.fat + (Number(meal.fat) || 0),
+      }), { calories: 0, protein: 0, carbs: 0, fat: 0 });
+
+      const adjustedCalorieGoal = profile.goalCalories + (fitnessData.caloriesBurned || 0);
+      const remainingCalories = adjustedCalorieGoal - totals.calories;
+
+      // --- Handlers ---
+      const saveApiKey = (e) => {
+        e.preventDefault();
+        localStorage.setItem('nutrisync_api_key', tempKey);
+        setApiKey(tempKey);
+      };
+
+      const clearApiKey = () => {
+        localStorage.removeItem('nutrisync_api_key');
+        setApiKey("");
+        setTempKey("");
+      };
+
+      const handleDeleteMeal = (id) => {
+        setMeals(meals.filter(m => m.id !== id));
+      };
+
+      const syncSmartWatch = () => {
+        const simulatedSteps = Math.floor(Math.random() * 5000) + 3000;
+        const simulatedCals = Math.floor(simulatedSteps * 0.04);
+        setFitnessData({
+          steps: fitnessData.steps + simulatedSteps,
+          caloriesBurned: fitnessData.caloriesBurned + simulatedCals,
+          activeMinutes: fitnessData.activeMinutes + Math.floor(Math.random() * 30) + 10,
+          lastSynced: new Date().toLocaleTimeString()
+        });
+      };
+
+      const logRecommendedMeal = () => {
+        if (!currentRecommendation) return;
+        const newMeal = {
+          id: Date.now(),
+          name: `${currentRecommendation.restaurant}: ${currentRecommendation.mealName}`,
+          type: 'Auto-Logged',
+          calories: currentRecommendation.calories,
+          protein: currentRecommendation.protein,
+          carbs: currentRecommendation.carbs,
+          fat: currentRecommendation.fat,
+          price: currentRecommendation.estimatedPrice
+        };
+        setMeals([newMeal, ...meals]);
+        setCurrentRecommendation(null);
+      };
+
+      const generateMealPlan = async () => {
+        if (!apiKey) {
+          setAiError("Please set your Gemini API key in settings first.");
+          setActiveTab('settings');
+          return;
+        }
+
+        setAiLoading(true);
+        setAiError('');
+        setCurrentRecommendation(null);
+
+        const prompt = `
+          Suggest ONE specific meal combination from a popular restaurant chain (Chipotle, Sweetgreen, Cava, etc.)
+          User status: ${remainingCalories} kcal left to eat today, ${fitnessData.caloriesBurned} kcal exercise burned today.
+        `;
+
+        try {
+          const payload = {
+            contents: [{ parts: [{ text: prompt }] }],
+            systemInstruction: { parts: [{ text: "You are an autonomous food ordering AI. You must return only valid JSON." }] },
+            generationConfig: {
+              responseMimeType: "application/json",
+              responseSchema: {
+                type: "OBJECT",
+                properties: {
+                  restaurant: { type: "STRING" },
+                  mealName: { type: "STRING" },
+                  orderInstructions: { type: "STRING" },
+                  calories: { type: "NUMBER" },
+                  protein: { type: "NUMBER" },
+                  carbs: { type: "NUMBER" },
+                  fat: { type: "NUMBER" },
+                  estimatedPrice: { type: "STRING" },
+                  reasoning: { type: "STRING" }
+                },
+                required: ["restaurant", "mealName", "orderInstructions", "calories", "protein", "carbs", "fat", "estimatedPrice", "reasoning"]
+              }
+            }
+          };
+
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+          
+          const data = await fetchWithRetry(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+
+          const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (text) {
+            setCurrentRecommendation(JSON.parse(text));
+          } else {
+            throw new Error("No response generated");
+          }
+        } catch (err) {
+          setAiError("Connection error. Check your API key in Settings.");
+          console.error(err);
+        } finally {
+          setAiLoading(false);
         }
       };
 
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-      
-      const data = await fetchWithRetry(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (text) {
-        setCurrentRecommendation(JSON.parse(text));
-      } else {
-        throw new Error("No response generated");
-      }
-    } catch (err) {
-      setAiError("Connection error. Check your API key in Settings.");
-      console.error(err);
-    } finally {
-      setAiLoading(false);
-    }
-  };
-
-  // --- API KEY SETUP OVERLAY ---
-  if (!apiKey && activeTab !== 'settings') {
-    return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-        <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl text-center">
-          <div className="bg-indigo-100 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 text-indigo-600">
-            <Lock size={32} />
-          </div>
-          <h2 className="text-2xl font-bold text-slate-900 mb-2">Secure Setup Required</h2>
-          <p className="text-slate-500 mb-8">To keep your app autonomous and free of hosting costs, please provide your Gemini API Key. It is stored <strong>locally in your browser</strong> and never sent to a server.</p>
-          
-          <form onSubmit={saveApiKey} className="space-y-4">
-            <div className="relative">
-              <Key className="absolute left-3 top-3 text-slate-400" size={20} />
-              <input 
-                type="password"
-                placeholder="Enter Gemini API Key..."
-                value={tempKey}
-                onChange={(e) => setTempKey(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none"
-                required
-              />
-            </div>
-            <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-all shadow-lg">
-              Unlock Autonomous Mode
-            </button>
-            <p className="text-xs text-slate-400">Get a free key at aistudio.google.com</p>
-          </form>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans">
-      
-      <header className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="bg-indigo-600 p-2 rounded-lg text-white">
-              <Brain size={20} />
-            </div>
-            <h1 className="text-xl font-bold tracking-tight">AutoDine AI</h1>
-          </div>
-          <div className="flex space-x-2">
-            {['dashboard', 'history', 'settings'].map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`p-2 rounded-full transition-all ${
-                  activeTab === tab 
-                    ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400' 
-                    : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'
-                }`}
-              >
-                {tab === 'dashboard' ? <Utensils size={20}/> : tab === 'history' ? <Activity size={20}/> : <Settings size={20}/>}
-              </button>
-            ))}
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
-        
-        {/* DASHBOARD */}
-        {activeTab === 'dashboard' && (
-          <div className="space-y-6 animate-in fade-in duration-300">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1 bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-200 dark:border-slate-700">
-                <div className="flex justify-between items-center mb-4">
-                  <span className="text-sm font-medium text-slate-500">Remaining Today</span>
-                  <span className="text-2xl font-black text-indigo-600 dark:text-indigo-400">{remainingCalories > 0 ? remainingCalories : 0} kcal</span>
-                </div>
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="text-center">
-                    <p className="text-[10px] uppercase font-bold text-slate-400">Pro</p>
-                    <p className="font-bold">{totals.protein} / {profile.goalProtein}</p>
-                  </div>
-                  <div className="text-center border-x border-slate-100 dark:border-slate-700">
-                    <p className="text-[10px] uppercase font-bold text-slate-400">Carb</p>
-                    <p className="font-bold">{totals.carbs} / {profile.goalCarbs}</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-[10px] uppercase font-bold text-slate-400">Fat</p>
-                    <p className="font-bold">{totals.fat} / {profile.goalFat}</p>
-                  </div>
-                </div>
+      // --- API KEY SETUP OVERLAY ---
+      if (!apiKey && activeTab !== 'settings') {
+        return (
+          <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl text-center">
+              <div className="bg-indigo-100 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 text-indigo-600">
+                <Lock size={32} />
               </div>
-
-              <div className="sm:w-48 bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col justify-center items-center relative">
-                <button onClick={syncSmartWatch} className="absolute top-2 right-2 text-slate-300 hover:text-indigo-500"><RefreshCw size={14}/></button>
-                <Activity className="text-rose-500 mb-1" size={24} />
-                <span className="text-2xl font-black">{fitnessData.caloriesBurned}</span>
-                <span className="text-[10px] text-slate-400 uppercase font-bold">Cals Burned</span>
-              </div>
-            </div>
-
-            {!currentRecommendation ? (
-              <div className="bg-indigo-600 rounded-3xl p-12 text-center shadow-xl text-white">
-                <Brain size={48} className="mx-auto mb-6 opacity-80" />
-                <h2 className="text-3xl font-black mb-4">What's Next?</h2>
-                <button 
-                  onClick={generateMealPlan}
-                  disabled={aiLoading}
-                  className="bg-white text-indigo-600 font-bold py-4 px-10 rounded-2xl shadow-lg hover:scale-105 transition-transform disabled:opacity-50"
-                >
-                  {aiLoading ? "Consulting AI..." : "Order For Me"}
+              <h2 className="text-2xl font-bold text-slate-900 mb-2">Secure Setup Required</h2>
+              <p className="text-slate-500 mb-8">To keep your app autonomous and free of hosting costs, please provide your Gemini API Key. It is stored <strong>locally in your browser</strong> and never sent to a server.</p>
+              
+              <form onSubmit={saveApiKey} className="space-y-4">
+                <div className="relative">
+                  <Key className="absolute left-3 top-3 text-slate-400" size={20} />
+                  <input 
+                    type="password"
+                    placeholder="Enter Gemini API Key..."
+                    value={tempKey}
+                    onChange={(e) => setTempKey(e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none"
+                    required
+                  />
+                </div>
+                <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-all shadow-lg">
+                  Unlock Autonomous Mode
                 </button>
-                {aiError && <p className="mt-4 text-red-200 text-sm">{aiError}</p>}
-              </div>
-            ) : (
-              <div className="bg-white dark:bg-slate-800 rounded-3xl overflow-hidden shadow-xl border border-slate-200 dark:border-slate-700">
-                <div className="bg-indigo-600 p-6 text-white">
-                  <p className="text-xs font-bold uppercase tracking-widest opacity-70">{currentRecommendation.restaurant}</p>
-                  <h2 className="text-2xl font-black">{currentRecommendation.mealName}</h2>
+                <p className="text-xs text-slate-400">Get a free key at aistudio.google.com</p>
+              </form>
+            </div>
+          </div>
+        );
+      }
+
+      return (
+        <div className="min-h-screen bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans text-left">
+          
+          <header className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10">
+            <div className="max-w-3xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="bg-indigo-600 p-2 rounded-lg text-white">
+                  <Brain size={20} />
                 </div>
-                <div className="p-8">
-                  <div className="bg-slate-50 dark:bg-slate-900 p-6 rounded-2xl mb-6">
-                    <p className="text-xs font-bold text-slate-400 uppercase mb-2">Instructions</p>
-                    <p className="text-xl font-medium">"{currentRecommendation.orderInstructions}"</p>
-                  </div>
-                  <div className="grid grid-cols-4 gap-4 mb-8">
-                     <div className="text-center"><p className="text-xs text-slate-400">Kcal</p><p className="font-bold">{currentRecommendation.calories}</p></div>
-                     <div className="text-center"><p className="text-xs text-slate-400">P</p><p className="font-bold">{currentRecommendation.protein}g</p></div>
-                     <div className="text-center"><p className="text-xs text-slate-400">C</p><p className="font-bold">{currentRecommendation.carbs}g</p></div>
-                     <div className="text-center"><p className="text-xs text-slate-400">F</p><p className="font-bold">{currentRecommendation.fat}g</p></div>
-                  </div>
-                  <button onClick={logRecommendedMeal} className="w-full bg-indigo-600 text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2">
-                    <CheckCircle2 size={20}/> I Ate This (Log It)
+                <h1 className="text-xl font-bold tracking-tight">AutoDine AI</h1>
+              </div>
+              <div className="flex space-x-2">
+                {['dashboard', 'history', 'settings'].map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`p-2 rounded-full transition-all ${
+                      activeTab === tab 
+                        ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400' 
+                        : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    {tab === 'dashboard' ? <Utensils size={20}/> : tab === 'history' ? <Activity size={20}/> : <Settings size={20}/>}
                   </button>
+                ))}
+              </div>
+            </div>
+          </header>
+
+          <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
+            
+            {/* DASHBOARD */}
+            {activeTab === 'dashboard' && (
+              <div className="space-y-6 animate-in fade-in duration-300">
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="flex-1 bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-200 dark:border-slate-700">
+                    <div className="flex justify-between items-center mb-4">
+                      <span className="text-sm font-medium text-slate-500">Remaining Today</span>
+                      <span className="text-2xl font-black text-indigo-600 dark:text-indigo-400">{remainingCalories > 0 ? remainingCalories : 0} kcal</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="text-center">
+                        <p className="text-[10px] uppercase font-bold text-slate-400">Pro</p>
+                        <p className="font-bold">{totals.protein} / {profile.goalProtein}</p>
+                      </div>
+                      <div className="text-center border-x border-slate-100 dark:border-slate-700">
+                        <p className="text-[10px] uppercase font-bold text-slate-400">Carb</p>
+                        <p className="font-bold">{totals.carbs} / {profile.goalCarbs}</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-[10px] uppercase font-bold text-slate-400">Fat</p>
+                        <p className="font-bold">{totals.fat} / {profile.goalFat}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="sm:w-48 bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col justify-center items-center relative">
+                    <button onClick={syncSmartWatch} className="absolute top-2 right-2 text-slate-300 hover:text-indigo-500"><RefreshCw size={14}/></button>
+                    <Activity className="text-rose-500 mb-1" size={24} />
+                    <span className="text-2xl font-black">{fitnessData.caloriesBurned}</span>
+                    <span className="text-[10px] text-slate-400 uppercase font-bold">Cals Burned</span>
+                  </div>
+                </div>
+
+                {!currentRecommendation ? (
+                  <div className="bg-indigo-600 rounded-3xl p-12 text-center shadow-xl text-white">
+                    <Brain size={48} className="mx-auto mb-6 opacity-80" />
+                    <h2 className="text-3xl font-black mb-4">What's Next?</h2>
+                    <button 
+                      onClick={generateMealPlan}
+                      disabled={aiLoading}
+                      className="bg-white text-indigo-600 font-bold py-4 px-10 rounded-2xl shadow-lg hover:scale-105 transition-transform disabled:opacity-50 flex items-center gap-2 mx-auto"
+                    >
+                      {aiLoading ? <><RefreshCw size={20} className="animate-spin" /> Consulting AI...</> : "Order For Me"}
+                    </button>
+                    {aiError && <p className="mt-4 text-red-200 text-sm">{aiError}</p>}
+                  </div>
+                ) : (
+                  <div className="bg-white dark:bg-slate-800 rounded-3xl overflow-hidden shadow-xl border border-slate-200 dark:border-slate-700">
+                    <div className="bg-indigo-600 p-6 text-white">
+                      <p className="text-xs font-bold uppercase tracking-widest opacity-70 flex items-center gap-1 mb-1"><MapPin size={14}/> {currentRecommendation.restaurant}</p>
+                      <h2 className="text-2xl font-black">{currentRecommendation.mealName}</h2>
+                    </div>
+                    <div className="p-8">
+                      <div className="bg-slate-50 dark:bg-slate-900 p-6 rounded-2xl mb-6 border border-slate-100 dark:border-slate-800">
+                        <p className="text-xs font-bold text-slate-400 uppercase mb-2 flex items-center gap-1"><Info size={14}/> Instructions</p>
+                        <p className="text-xl font-medium">"{currentRecommendation.orderInstructions}"</p>
+                      </div>
+                      <div className="grid grid-cols-4 gap-4 mb-8">
+                         <div className="text-center"><p className="text-xs text-slate-400">Kcal</p><p className="font-bold">{currentRecommendation.calories}</p></div>
+                         <div className="text-center"><p className="text-xs text-slate-400">P</p><p className="font-bold text-red-500">{currentRecommendation.protein}g</p></div>
+                         <div className="text-center"><p className="text-xs text-slate-400">C</p><p className="font-bold text-yellow-500">{currentRecommendation.carbs}g</p></div>
+                         <div className="text-center"><p className="text-xs text-slate-400">F</p><p className="font-bold text-emerald-500">{currentRecommendation.fat}g</p></div>
+                      </div>
+                      <button onClick={logRecommendedMeal} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2 shadow-md">
+                        <CheckCircle2 size={20}/> I Ate This (Log It)
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* HISTORY */}
+            {activeTab === 'history' && (
+              <div className="space-y-4">
+                <h2 className="text-xl font-bold mb-4 px-2">Recent Log</h2>
+                {meals.map(meal => (
+                  <div key={meal.id} className="bg-white dark:bg-slate-800 p-4 rounded-2xl flex justify-between items-center shadow-sm">
+                    <div>
+                      <p className="font-bold">{meal.name}</p>
+                      <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
+                        {meal.calories} kcal • <DollarSign size={12}/> {meal.price.replace('$', '')}
+                      </p>
+                    </div>
+                    <button onClick={() => handleDeleteMeal(meal.id)} className="text-slate-300 hover:text-red-500 p-2"><Trash2 size={18}/></button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* SETTINGS */}
+            {activeTab === 'settings' && (
+              <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 shadow-sm">
+                <h2 className="text-xl font-bold mb-6">Settings</h2>
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-500 mb-2">Gemini API Key</label>
+                    <div className="flex gap-2">
+                      <input 
+                        type="password" 
+                        value={apiKey ? "••••••••••••••••" : ""} 
+                        disabled 
+                        className="flex-1 px-4 py-2 bg-slate-100 dark:bg-slate-700 rounded-lg outline-none"
+                      />
+                      <button onClick={clearApiKey} className="px-4 py-2 bg-red-50 text-red-600 rounded-lg font-bold">Reset</button>
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-2 italic">Stored locally in this browser only.</p>
+                  </div>
+                  <div className="pt-6 border-t border-slate-100 dark:border-slate-700">
+                    <p className="text-sm text-slate-500">
+                      <strong>Deployment:</strong> Since this is a single HTML file, you can upload it directly to your GitHub repository and turn on GitHub Pages. No <code>npm run build</code> required.
+                    </p>
+                  </div>
                 </div>
               </div>
             )}
-          </div>
-        )}
 
-        {/* HISTORY */}
-        {activeTab === 'history' && (
-          <div className="space-y-4">
-            <h2 className="text-xl font-bold mb-4 px-2">Recent Log</h2>
-            {meals.map(meal => (
-              <div key={meal.id} className="bg-white dark:bg-slate-800 p-4 rounded-2xl flex justify-between items-center shadow-sm">
-                <div>
-                  <p className="font-bold">{meal.name}</p>
-                  <p className="text-xs text-slate-500">{meal.calories} kcal • {meal.price}</p>
-                </div>
-                <button onClick={() => handleDeleteMeal(meal.id)} className="text-slate-300 hover:text-red-500"><Trash2 size={18}/></button>
-              </div>
-            ))}
-          </div>
-        )}
+          </main>
+        </div>
+      );
+    }
 
-        {/* SETTINGS */}
-        {activeTab === 'settings' && (
-          <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 shadow-sm">
-            <h2 className="text-xl font-bold mb-6">Settings</h2>
-            <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-slate-500 mb-2">Gemini API Key</label>
-                <div className="flex gap-2">
-                  <input 
-                    type="password" 
-                    value={apiKey ? "••••••••••••••••" : ""} 
-                    disabled 
-                    className="flex-1 px-4 py-2 bg-slate-100 dark:bg-slate-700 rounded-lg outline-none"
-                  />
-                  <button onClick={clearApiKey} className="px-4 py-2 bg-red-50 text-red-600 rounded-lg font-bold">Reset</button>
-                </div>
-                <p className="text-[10px] text-slate-400 mt-2 italic">Stored locally in this browser only.</p>
-              </div>
-              <div className="pt-6 border-t border-slate-100 dark:border-slate-700">
-                <p className="text-sm text-slate-500">Host this on GitHub Pages by pushing this single file as <code>index.html</code> (wrapped in HTML tags) or <code>App.jsx</code> in a Vite React project.</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-      </main>
-    </div>
-  );
-}
+    // Render the React application
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
