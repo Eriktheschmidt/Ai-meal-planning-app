@@ -17,6 +17,17 @@
 
   <style>
     body { margin: 0; font-family: system-ui, -apple-system, sans-serif; }
+    .animate-fade-in { animation: fadeIn 0.3s ease-in-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .shimmer {
+      background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+    }
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
   </style>
 </head>
 <body class="bg-slate-100 dark:bg-slate-900">
@@ -25,7 +36,7 @@
   <script type="text/babel">
     const { useState, useEffect } = React;
 
-    // --- Inline Icons (Replaces lucide-react to prevent import errors) ---
+    // --- Icons ---
     const Activity = ({size=24, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>;
     const Utensils = ({size=24, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"></path><path d="M7 2v20"></path><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"></path></svg>;
     const Brain = ({size=24, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"></path><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"></path><path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4"></path><path d="M17.599 6.5a3 3 0 0 0 .399-1.375"></path><path d="M6.003 5.125A3 3 0 0 0 6.401 6.5"></path><path d="M3.477 10.896a4 4 0 0 1 .585-.396"></path><path d="M19.938 10.5a4 4 0 0 1 .585.396"></path><path d="M6 18a4 4 0 0 1-1.967-.516"></path><path d="M19.967 17.484A4 4 0 0 1 18 18"></path></svg>;
@@ -39,60 +50,55 @@
     const Settings = ({size=24, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>;
     const Lock = ({size=24, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>;
     const Key = ({size=24, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m15.5 7.5 2.3 2.3a1 1 0 0 0 1.4 0l2.1-2.1a1 1 0 0 0 0-1.4L19 4"></path><path d="m21 2-9.6 9.6"></path><circle cx="7.5" cy="15.5" r="5.5"></circle></svg>;
+    const MapIcon = ({size=24, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"></polygon><line x1="9" x2="9" y1="3" y2="18"></line><line x1="15" x2="15" y1="6" y2="21"></line></svg>;
+    const Navigation = ({size=24, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="3 11 22 2 13 21 11 13 3 11"></polygon></svg>;
 
-    // Exponential backoff helper for API calls
+    // Fetch with Retry and Enhanced Error Reporting
     const fetchWithRetry = async (url, options, retries = 5) => {
       const delays = [1000, 2000, 4000, 8000, 16000];
       for (let i = 0; i < retries; i++) {
         try {
           const response = await fetch(url, options);
           if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            const errorBody = await response.json().catch(() => ({}));
+            throw {
+              status: response.status,
+              message: errorBody.error?.message || response.statusText
+            };
           }
           return await response.json();
         } catch (error) {
-          if (i === retries - 1) throw error;
+          if (i === retries - 1 || error.status === 403 || error.status === 400 || error.status === 404) throw error;
           await new Promise(res => setTimeout(res, delays[i]));
         }
       }
     };
 
     function App() {
-      // --- State Management ---
       const [activeTab, setActiveTab] = useState('dashboard');
-      
-      // API Key Storage (Keeps key off GitHub)
       const [apiKey, setApiKey] = useState(() => localStorage.getItem('nutrisync_api_key') || "");
       const [tempKey, setTempKey] = useState("");
-
-      // User Profile & Goals
       const [profile] = useState(() => {
         const saved = localStorage.getItem('nutrisync_profile');
         return saved ? JSON.parse(saved) : { goalCalories: 2500, goalProtein: 150, goalCarbs: 250, goalFat: 80, dietPreference: 'Any' };
       });
-
-      // Logged Meals
       const [meals, setMeals] = useState(() => {
         const saved = localStorage.getItem('nutrisync_meals');
         return saved ? JSON.parse(saved) : [];
       });
-
-      // Smartwatch / Fitness Data
       const [fitnessData, setFitnessData] = useState(() => {
         const saved = localStorage.getItem('nutrisync_fitness');
         return saved ? JSON.parse(saved) : { steps: 0, caloriesBurned: 0, activeMinutes: 0, lastSynced: null };
       });
-
-      // Autonomous AI State
       const [aiLoading, setAiLoading] = useState(false);
+      const [loadingStep, setLoadingStep] = useState('');
       const [currentRecommendation, setCurrentRecommendation] = useState(null);
       const [aiError, setAiError] = useState('');
+      const [userLocation, setUserLocation] = useState(null);
 
-      // --- Effects ---
       useEffect(() => { localStorage.setItem('nutrisync_meals', JSON.stringify(meals)); }, [meals]);
       useEffect(() => { localStorage.setItem('nutrisync_fitness', JSON.stringify(fitnessData)); }, [fitnessData]);
 
-      // --- Derived Metrics ---
       const totals = meals.reduce((acc, meal) => ({
         calories: acc.calories + (Number(meal.calories) || 0),
         protein: acc.protein + (Number(meal.protein) || 0),
@@ -101,19 +107,18 @@
       }), { calories: 0, protein: 0, carbs: 0, fat: 0 });
 
       const adjustedCalorieGoal = profile.goalCalories + (fitnessData.caloriesBurned || 0);
-      const remainingCalories = adjustedCalorieGoal - totals.calories;
+      const remainingCalories = Math.max(0, adjustedCalorieGoal - totals.calories);
 
-      // --- Handlers ---
       const saveApiKey = (e) => {
         e.preventDefault();
         localStorage.setItem('nutrisync_api_key', tempKey);
         setApiKey(tempKey);
+        setTempKey("");
       };
 
       const clearApiKey = () => {
         localStorage.removeItem('nutrisync_api_key');
         setApiKey("");
-        setTempKey("");
       };
 
       const handleDeleteMeal = (id) => {
@@ -149,7 +154,6 @@
 
       const generateMealPlan = async () => {
         if (!apiKey) {
-          setAiError("Please set your Gemini API key in settings first.");
           setActiveTab('settings');
           return;
         }
@@ -157,11 +161,35 @@
         setAiLoading(true);
         setAiError('');
         setCurrentRecommendation(null);
+        setLoadingStep('Locating you...');
+
+        let locationContext = "Location access denied. Suggest a universally common restaurant chain.";
+        let currentLat = null;
+        let currentLon = null;
+
+        // Attempt to get user location
+        try {
+          const pos = await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 8000 });
+          });
+          currentLat = pos.coords.latitude;
+          currentLon = pos.coords.longitude;
+          setUserLocation({ lat: currentLat, lon: currentLon });
+          locationContext = `The user is currently at coordinates: Latitude ${currentLat}, Longitude ${currentLon}. Suggest a popular restaurant chain that is highly likely to have a location near these coordinates.`;
+        } catch (err) {
+          console.warn("Location not provided: ", err);
+          setUserLocation(null);
+        }
+
+        setLoadingStep('Consulting AI...');
 
         const prompt = `
-          Suggest ONE specific meal combination from a popular restaurant chain (Chipotle, Sweetgreen, Cava, etc.)
+          You are an expert culinary AI and dietary assistant. Suggest ONE specific, highly nutritious meal combination from a real restaurant. 
+          CRITICAL INSTRUCTION: VARY YOUR RECOMMENDATIONS widely! Do NOT just suggest Chipotle, Sweetgreen, or Cava every time. Broaden the horizon to include a diverse variety of cuisines (e.g., Mediterranean joints, Sushi/Japanese, healthy Thai, Indian, local health cafes, upscale grills, or diverse chains like True Food Kitchen, Nando's, etc.).
           User status: ${remainingCalories} kcal left to eat today, ${fitnessData.caloriesBurned} kcal exercise burned today.
-          Also provide the latest nutritional science or news explaining why the specific ingredients in this meal are highly beneficial for the user right now.
+          User preference: ${profile.dietPreference}.
+          Location Context: ${locationContext}
+          Also provide a dedicated section with the latest nutritional science or news explaining why the specific ingredients in this meal are highly beneficial for the user right now given their activity levels and remaining macro needs.
         `;
 
         try {
@@ -182,14 +210,16 @@
                   fat: { type: "NUMBER" },
                   estimatedPrice: { type: "STRING" },
                   reasoning: { type: "STRING" },
-                  healthNewsAndBenefits: { type: "STRING", description: "A paragraph detailing recent nutritional science or news on why these ingredients are excellent for the user's current fitness context." }
+                  healthNewsAndBenefits: { type: "STRING" }
                 },
                 required: ["restaurant", "mealName", "orderInstructions", "calories", "protein", "carbs", "fat", "estimatedPrice", "reasoning", "healthNewsAndBenefits"]
               }
             }
           };
 
-          const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+          // Switching to the standard, stable Gemini 2.5 Flash model
+          const modelName = "gemini-2.5-flash";
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
           
           const data = await fetchWithRetry(url, {
             method: 'POST',
@@ -201,17 +231,18 @@
           if (text) {
             setCurrentRecommendation(JSON.parse(text));
           } else {
-            throw new Error("No response generated");
+            throw new Error("Received empty response from the AI model.");
           }
         } catch (err) {
-          setAiError("Connection error. Check your API key in Settings.");
-          console.error(err);
+          const msg = err.message || "Unknown error occurred.";
+          const status = err.status ? `(Status ${err.status})` : "";
+          setAiError(`API Error ${status}: ${msg}`);
+          console.error("Full AI Error Context:", err);
         } finally {
           setAiLoading(false);
         }
       };
 
-      // --- API KEY SETUP OVERLAY ---
       if (!apiKey && activeTab !== 'settings') {
         return (
           <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
@@ -219,12 +250,12 @@
               <div className="bg-indigo-100 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 text-indigo-600">
                 <Lock size={32} />
               </div>
-              <h2 className="text-2xl font-bold text-slate-900 mb-2">Secure Setup Required</h2>
-              <p className="text-slate-500 mb-8">To keep your app autonomous and free of hosting costs, please provide your Gemini API Key. It is stored <strong>locally in your browser</strong> and never sent to a server.</p>
+              <h2 className="text-2xl font-bold text-slate-900 mb-2">Autonomous Assistant</h2>
+              <p className="text-slate-500 mb-8 text-sm leading-relaxed">Provide your Gemini API Key to enable the AI coach. Your key is stored locally in your browser cache only.</p>
               
               <form onSubmit={saveApiKey} className="space-y-4">
                 <div className="relative">
-                  <Key className="absolute left-3 top-3 text-slate-400" size={20} />
+                  <Key className="absolute left-3 top-3.5 text-slate-400" size={18} />
                   <input 
                     type="password"
                     placeholder="Enter Gemini API Key..."
@@ -234,10 +265,10 @@
                     required
                   />
                 </div>
-                <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-all shadow-lg">
-                  Unlock Autonomous Mode
+                <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg active:scale-95">
+                  Unlock AI Assistant
                 </button>
-                <p className="text-xs text-slate-400">Get a free key at aistudio.google.com</p>
+                <p className="text-xs text-slate-400 mt-2 italic">Requires Gemini 2.5 Flash access.</p>
               </form>
             </div>
           </div>
@@ -245,8 +276,7 @@
       }
 
       return (
-        <div className="min-h-screen bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans text-left">
-          
+        <div className="min-h-screen bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans text-left pb-10">
           <header className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10">
             <div className="max-w-3xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -260,7 +290,7 @@
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
-                    className={`p-2 rounded-full transition-all ${
+                    className={`p-2.5 rounded-full transition-all ${
                       activeTab === tab 
                         ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400' 
                         : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'
@@ -274,138 +304,180 @@
           </header>
 
           <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
-            
-            {/* DASHBOARD */}
             {activeTab === 'dashboard' && (
-              <div className="space-y-6 animate-in fade-in duration-300">
+              <div className="space-y-6 animate-fade-in">
                 <div className="flex flex-col sm:flex-row gap-4">
-                  <div className="flex-1 bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-200 dark:border-slate-700">
+                  <div className="flex-1 bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
                     <div className="flex justify-between items-center mb-4">
-                      <span className="text-sm font-medium text-slate-500">Remaining Today</span>
-                      <span className="text-2xl font-black text-indigo-600 dark:text-indigo-400">{remainingCalories > 0 ? remainingCalories : 0} kcal</span>
+                      <span className="text-sm font-medium text-slate-500 uppercase tracking-widest">Budget Remaining</span>
+                      <span className="text-3xl font-black text-indigo-600 dark:text-indigo-400">{remainingCalories} <span className="text-sm font-medium text-slate-400">kcal</span></span>
                     </div>
-                    <div className="grid grid-cols-3 gap-4">
-                      <div className="text-center">
-                        <p className="text-[10px] uppercase font-bold text-slate-400">Pro</p>
-                        <p className="font-bold">{totals.protein} / {profile.goalProtein}</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="text-center bg-slate-50 dark:bg-slate-900/40 p-2 rounded-xl">
+                        <p className="text-[10px] uppercase font-bold text-slate-400">P</p>
+                        <p className="font-bold text-sm">{totals.protein} / {profile.goalProtein}g</p>
                       </div>
-                      <div className="text-center border-x border-slate-100 dark:border-slate-700">
-                        <p className="text-[10px] uppercase font-bold text-slate-400">Carb</p>
-                        <p className="font-bold">{totals.carbs} / {profile.goalCarbs}</p>
+                      <div className="text-center bg-slate-50 dark:bg-slate-900/40 p-2 rounded-xl">
+                        <p className="text-[10px] uppercase font-bold text-slate-400">C</p>
+                        <p className="font-bold text-sm">{totals.carbs} / {profile.goalCarbs}g</p>
                       </div>
-                      <div className="text-center">
-                        <p className="text-[10px] uppercase font-bold text-slate-400">Fat</p>
-                        <p className="font-bold">{totals.fat} / {profile.goalFat}</p>
+                      <div className="text-center bg-slate-50 dark:bg-slate-900/40 p-2 rounded-xl">
+                        <p className="text-[10px] uppercase font-bold text-slate-400">F</p>
+                        <p className="font-bold text-sm">{totals.fat} / {profile.goalFat}g</p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="sm:w-48 bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col justify-center items-center relative">
-                    <button onClick={syncSmartWatch} className="absolute top-2 right-2 text-slate-300 hover:text-indigo-500"><RefreshCw size={14}/></button>
+                  <div className="sm:w-48 bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col justify-center items-center relative">
+                    <button onClick={syncSmartWatch} className="absolute top-2 right-2 text-slate-300 hover:text-indigo-500 transition-colors"><RefreshCw size={14}/></button>
                     <Activity className="text-rose-500 mb-1" size={24} />
-                    <span className="text-2xl font-black">{fitnessData.caloriesBurned}</span>
-                    <span className="text-[10px] text-slate-400 uppercase font-bold">Cals Burned</span>
+                    <span className="text-3xl font-black">{fitnessData.caloriesBurned}</span>
+                    <span className="text-[10px] text-slate-400 uppercase font-bold text-center">Exercise<br/>Burned</span>
                   </div>
                 </div>
 
                 {!currentRecommendation ? (
-                  <div className="bg-indigo-600 rounded-3xl p-12 text-center shadow-xl text-white">
-                    <Brain size={48} className="mx-auto mb-6 opacity-80" />
-                    <h2 className="text-3xl font-black mb-4">What's Next?</h2>
+                  <div className="bg-indigo-600 rounded-3xl p-10 text-center shadow-xl text-white relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-4 opacity-10"><Brain size={120}/></div>
+                    <h2 className="text-3xl font-black mb-4">Deciding What's Next?</h2>
+                    <p className="text-indigo-100 mb-8 max-w-sm mx-auto">Click below to let Gemini analyze your current nutrient gaps, burned calories, and location to suggest the perfect meal nearby.</p>
                     <button 
                       onClick={generateMealPlan}
                       disabled={aiLoading}
-                      className="bg-white text-indigo-600 font-bold py-4 px-10 rounded-2xl shadow-lg hover:scale-105 transition-transform disabled:opacity-50 flex items-center gap-2 mx-auto"
+                      className="bg-white text-indigo-600 font-bold py-4 px-12 rounded-2xl shadow-lg hover:scale-105 transition-transform disabled:opacity-50 flex items-center gap-2 mx-auto active:scale-95"
                     >
-                      {aiLoading ? <><RefreshCw size={20} className="animate-spin" /> Consulting AI...</> : "Order For Me"}
+                      {aiLoading ? <><RefreshCw size={20} className="animate-spin" /> {loadingStep}</> : <><MapPin size={20}/> Find My Next Meal</>}
                     </button>
-                    {aiError && <p className="mt-4 text-red-200 text-sm">{aiError}</p>}
+                    {aiError && <p className="mt-6 text-red-200 text-sm bg-red-500/20 p-4 rounded-xl border border-red-500/30 break-words">{aiError}</p>}
                   </div>
                 ) : (
-                  <div className="bg-white dark:bg-slate-800 rounded-3xl overflow-hidden shadow-xl border border-slate-200 dark:border-slate-700">
-                    <div className="bg-indigo-600 p-6 text-white">
-                      <p className="text-xs font-bold uppercase tracking-widest opacity-70 flex items-center gap-1 mb-1"><MapPin size={14}/> {currentRecommendation.restaurant}</p>
-                      <h2 className="text-2xl font-black">{currentRecommendation.mealName}</h2>
+                  <div className="bg-white dark:bg-slate-800 rounded-3xl overflow-hidden shadow-xl border border-slate-200 dark:border-slate-700 animate-fade-in">
+                    <div className="bg-indigo-600 p-6 text-white flex justify-between items-start">
+                      <div>
+                        <p className="text-xs font-bold uppercase tracking-widest opacity-80 flex items-center gap-1 mb-1"><MapPin size={14}/> {currentRecommendation.restaurant}</p>
+                        <h2 className="text-2xl font-black">{currentRecommendation.mealName}</h2>
+                      </div>
+                      <div className="bg-white/20 px-3 py-1 rounded-lg font-bold flex items-center gap-1">
+                        <DollarSign size={14}/>{currentRecommendation.estimatedPrice.replace('$', '')}
+                      </div>
                     </div>
                     <div className="p-8">
                       <div className="bg-slate-50 dark:bg-slate-900 p-6 rounded-2xl mb-6 border border-slate-100 dark:border-slate-800">
-                        <p className="text-xs font-bold text-slate-400 uppercase mb-2 flex items-center gap-1"><Info size={14}/> Instructions</p>
-                        <p className="text-xl font-medium">"{currentRecommendation.orderInstructions}"</p>
+                        <p className="text-xs font-bold text-slate-400 uppercase mb-2 flex items-center gap-1"><Info size={14}/> Exact Ordering Instructions</p>
+                        <p className="text-xl font-medium leading-relaxed italic">"{currentRecommendation.orderInstructions}"</p>
                       </div>
+                      
                       <div className="grid grid-cols-4 gap-4 mb-8">
-                         <div className="text-center"><p className="text-xs text-slate-400">Kcal</p><p className="font-bold">{currentRecommendation.calories}</p></div>
-                         <div className="text-center"><p className="text-xs text-slate-400">P</p><p className="font-bold text-red-500">{currentRecommendation.protein}g</p></div>
-                         <div className="text-center"><p className="text-xs text-slate-400">C</p><p className="font-bold text-yellow-500">{currentRecommendation.carbs}g</p></div>
-                         <div className="text-center"><p className="text-xs text-slate-400">F</p><p className="font-bold text-emerald-500">{currentRecommendation.fat}g</p></div>
+                         <div className="text-center"><p className="text-xs text-slate-400 font-bold">Kcal</p><p className="font-black text-xl">{currentRecommendation.calories}</p></div>
+                         <div className="text-center"><p className="text-xs text-slate-400 font-bold">Pro</p><p className="font-black text-xl text-rose-500">{currentRecommendation.protein}g</p></div>
+                         <div className="text-center"><p className="text-xs text-slate-400 font-bold">Carb</p><p className="font-black text-xl text-amber-500">{currentRecommendation.carbs}g</p></div>
+                         <div className="text-center"><p className="text-xs text-slate-400 font-bold">Fat</p><p className="font-black text-xl text-emerald-500">{currentRecommendation.fat}g</p></div>
                       </div>
 
-                      <div className="bg-indigo-50 dark:bg-indigo-900/20 p-6 rounded-2xl mb-8 border border-indigo-100 dark:border-indigo-800/50">
-                        <p className="text-xs font-bold text-indigo-500 uppercase mb-2 flex items-center gap-1"><Newspaper size={14}/> Nutritional Science & News</p>
-                        <p className="text-sm text-indigo-900 dark:text-indigo-200 leading-relaxed">
+                      <div className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-2xl mb-8 border border-blue-100 dark:border-blue-800/50">
+                        <p className="text-xs font-bold text-blue-500 uppercase mb-3 flex items-center gap-1 tracking-wider">
+                          <Newspaper size={14}/> Nutritional Science & News
+                        </p>
+                        <p className="text-sm text-blue-900 dark:text-blue-200 leading-relaxed font-medium">
                           {currentRecommendation.healthNewsAndBenefits}
                         </p>
                       </div>
 
-                      <button onClick={logRecommendedMeal} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2 shadow-md">
-                        <CheckCircle2 size={20}/> I Ate This (Log It)
-                      </button>
+                      {/* --- Navigation & Maps Section --- */}
+                      <div className="mb-8">
+                        <p className="text-xs font-bold text-slate-400 uppercase mb-3 flex items-center gap-1">
+                          <MapIcon size={14}/> Nearest Location
+                        </p>
+                        <div className="rounded-2xl overflow-hidden shadow-sm border border-slate-200 dark:border-slate-700 mb-3 bg-slate-100 dark:bg-slate-800">
+                          <iframe 
+                            width="100%" 
+                            height="200" 
+                            style={{ border: 0 }} 
+                            loading="lazy" 
+                            allowFullScreen 
+                            src={`https://maps.google.com/maps?q=${encodeURIComponent(currentRecommendation.restaurant)}${userLocation ? `+near+${userLocation.lat},${userLocation.lon}` : ''}&t=&z=14&ie=UTF8&iwloc=&output=embed`}
+                          ></iframe>
+                        </div>
+                        <a 
+                          href={`https://www.google.com/maps/dir/?api=1${userLocation ? `&origin=${userLocation.lat},${userLocation.lon}` : ''}&destination=${encodeURIComponent(currentRecommendation.restaurant)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="w-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-colors active:scale-95"
+                        >
+                          <Navigation size={18}/> Open Directions in Google Maps
+                        </a>
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row gap-3">
+                        <button onClick={logRecommendedMeal} className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2 shadow-md transition-colors active:scale-95">
+                          <CheckCircle2 size={20}/> Confirm Consumption (Log It)
+                        </button>
+                        <button onClick={generateMealPlan} className="bg-slate-100 dark:bg-slate-700 px-8 py-4 rounded-2xl font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition-colors active:scale-95">
+                          Skip
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
               </div>
             )}
 
-            {/* HISTORY */}
             {activeTab === 'history' && (
-              <div className="space-y-4">
-                <h2 className="text-xl font-bold mb-4 px-2">Recent Log</h2>
-                {meals.map(meal => (
-                  <div key={meal.id} className="bg-white dark:bg-slate-800 p-4 rounded-2xl flex justify-between items-center shadow-sm">
-                    <div>
-                      <p className="font-bold">{meal.name}</p>
-                      <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
-                        {meal.calories} kcal • <DollarSign size={12}/> {meal.price.replace('$', '')}
-                      </p>
-                    </div>
-                    <button onClick={() => handleDeleteMeal(meal.id)} className="text-slate-300 hover:text-red-500 p-2"><Trash2 size={18}/></button>
+              <div className="space-y-4 animate-fade-in">
+                <h2 className="text-xl font-black mb-4 px-2 tracking-tight">Daily Meal Log</h2>
+                {meals.length === 0 ? (
+                  <div className="text-center py-20 text-slate-400 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-3xl">
+                    <Utensils size={40} className="mx-auto mb-4 opacity-20"/>
+                    <p className="font-medium">No meals logged today yet.</p>
                   </div>
-                ))}
+                ) : (
+                  meals.map(meal => (
+                    <div key={meal.id} className="bg-white dark:bg-slate-800 p-5 rounded-2xl flex justify-between items-center shadow-sm border border-slate-100 dark:border-slate-700">
+                      <div>
+                        <p className="font-bold text-slate-800 dark:text-slate-200">{meal.name}</p>
+                        <p className="text-xs text-slate-500 mt-1 font-semibold">
+                          {meal.calories} kcal • {meal.protein}g P • {meal.carbs}g C • {meal.fat}g F
+                        </p>
+                      </div>
+                      <button onClick={() => handleDeleteMeal(meal.id)} className="text-slate-300 hover:text-red-500 p-2 transition-colors"><Trash2 size={18}/></button>
+                    </div>
+                  ))
+                )}
               </div>
             )}
 
-            {/* SETTINGS */}
             {activeTab === 'settings' && (
-              <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 shadow-sm">
-                <h2 className="text-xl font-bold mb-6">Settings</h2>
-                <div className="space-y-6">
+              <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 shadow-sm border border-slate-200 dark:border-slate-700 animate-fade-in">
+                <h2 className="text-2xl font-black mb-6 tracking-tight">Profile Settings</h2>
+                <div className="space-y-8">
                   <div>
-                    <label className="block text-sm font-medium text-slate-500 mb-2">Gemini API Key</label>
+                    <label className="block text-xs font-bold uppercase text-slate-400 mb-3 tracking-widest">Model Information</label>
+                    <div className="p-4 bg-slate-50 dark:bg-slate-900/60 rounded-2xl flex items-center gap-3 mb-4">
+                      <Brain size={20} className="text-indigo-500" />
+                      <div>
+                        <p className="text-sm font-bold">Gemini 2.5 Flash (Stable)</p>
+                        <p className="text-[10px] text-slate-500">Active Identifier: gemini-2.5-flash</p>
+                      </div>
+                    </div>
+                    <label className="block text-xs font-bold uppercase text-slate-400 mb-3 tracking-widest">API Authentication</label>
                     <div className="flex gap-2">
                       <input 
                         type="password" 
-                        value={apiKey ? "••••••••••••••••" : ""} 
+                        value={apiKey ? "••••••••••••••••••••••••••••" : ""} 
                         disabled 
-                        className="flex-1 px-4 py-2 bg-slate-100 dark:bg-slate-700 rounded-lg outline-none"
+                        className="flex-1 px-4 py-3 bg-slate-100 dark:bg-slate-700 rounded-xl outline-none text-slate-500"
                       />
-                      <button onClick={clearApiKey} className="px-4 py-2 bg-red-50 text-red-600 rounded-lg font-bold">Reset</button>
+                      <button onClick={clearApiKey} className="px-5 py-3 bg-red-50 text-red-600 rounded-xl font-bold hover:bg-red-100 transition-colors">Reset Key</button>
                     </div>
-                    <p className="text-[10px] text-slate-400 mt-2 italic">Stored locally in this browser only.</p>
-                  </div>
-                  <div className="pt-6 border-t border-slate-100 dark:border-slate-700">
-                    <p className="text-sm text-slate-500">
-                      <strong>Deployment:</strong> Since this is a single HTML file, you can upload it directly to your GitHub repository and turn on GitHub Pages. No <code>npm run build</code> required.
-                    </p>
                   </div>
                 </div>
               </div>
             )}
-
           </main>
         </div>
       );
     }
 
-    // Render the React application
     const root = ReactDOM.createRoot(document.getElementById('root'));
     root.render(<App />);
   </script>
