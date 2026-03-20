@@ -1,0 +1,376 @@
+import React, { useState, useEffect } from 'react';
+import { Activity, Utensils, Brain, CheckCircle2, RefreshCw, Trash2, MapPin, DollarSign, Info } from 'lucide-react';
+
+// The execution environment provides the key at runtime.
+const apiKey = "";
+
+// Exponential backoff helper for API calls
+const fetchWithRetry = async (url, options, retries = 5) => {
+  const delays = [1000, 2000, 4000, 8000, 16000];
+  for (let i = 0; i < retries; i++) {
+    try {
+      const response = await fetch(url, options);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return await response.json();
+    } catch (error) {
+      if (i === retries - 1) throw error;
+      await new Promise(res => setTimeout(res, delays[i]));
+    }
+  }
+};
+
+export default function App() {
+  // --- State Management ---
+  const [activeTab, setActiveTab] = useState('dashboard');
+  
+  // User Profile & Goals
+  const [profile] = useState(() => {
+    const saved = localStorage.getItem('nutrisync_profile');
+    return saved ? JSON.parse(saved) : { goalCalories: 2500, goalProtein: 150, goalCarbs: 250, goalFat: 80, dietPreference: 'Any' };
+  });
+
+  // Logged Meals
+  const [meals, setMeals] = useState(() => {
+    const saved = localStorage.getItem('nutrisync_meals');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  // Smartwatch / Fitness Data
+  const [fitnessData, setFitnessData] = useState(() => {
+    const saved = localStorage.getItem('nutrisync_fitness');
+    return saved ? JSON.parse(saved) : { steps: 0, caloriesBurned: 0, activeMinutes: 0, lastSynced: null };
+  });
+
+  // Autonomous AI State
+  const [aiLoading, setAiLoading] = useState(false);
+  const [currentRecommendation, setCurrentRecommendation] = useState(null);
+  const [aiError, setAiError] = useState('');
+
+  // --- Effects ---
+  useEffect(() => { localStorage.setItem('nutrisync_meals', JSON.stringify(meals)); }, [meals]);
+  useEffect(() => { localStorage.setItem('nutrisync_fitness', JSON.stringify(fitnessData)); }, [fitnessData]);
+
+  // --- Derived Metrics ---
+  const totals = meals.reduce((acc, meal) => ({
+    calories: acc.calories + (Number(meal.calories) || 0),
+    protein: acc.protein + (Number(meal.protein) || 0),
+    carbs: acc.carbs + (Number(meal.carbs) || 0),
+    fat: acc.fat + (Number(meal.fat) || 0),
+  }), { calories: 0, protein: 0, carbs: 0, fat: 0 });
+
+  const adjustedCalorieGoal = profile.goalCalories + (fitnessData.caloriesBurned || 0);
+  const remainingCalories = adjustedCalorieGoal - totals.calories;
+
+  // --- Handlers ---
+  const handleDeleteMeal = (id) => {
+    setMeals(meals.filter(m => m.id !== id));
+  };
+
+  const syncSmartWatch = () => {
+    const simulatedSteps = Math.floor(Math.random() * 5000) + 3000;
+    const simulatedCals = Math.floor(simulatedSteps * 0.04);
+    setFitnessData({
+      steps: fitnessData.steps + simulatedSteps,
+      caloriesBurned: fitnessData.caloriesBurned + simulatedCals,
+      activeMinutes: fitnessData.activeMinutes + Math.floor(Math.random() * 30) + 10,
+      lastSynced: new Date().toLocaleTimeString()
+    });
+  };
+
+  // Autonomous "I Ate This" Logger
+  const logRecommendedMeal = () => {
+    if (!currentRecommendation) return;
+    
+    const newMeal = {
+      id: Date.now(),
+      name: `${currentRecommendation.restaurant}: ${currentRecommendation.mealName}`,
+      type: 'Auto-Logged',
+      calories: currentRecommendation.calories,
+      protein: currentRecommendation.protein,
+      carbs: currentRecommendation.carbs,
+      fat: currentRecommendation.fat,
+      price: currentRecommendation.estimatedPrice
+    };
+    
+    setMeals([newMeal, ...meals]);
+    setCurrentRecommendation(null); // Clear recommendation after eating
+  };
+
+  // AI Generation (Structured JSON)
+  const generateMealPlan = async () => {
+    setAiLoading(true);
+    setAiError('');
+    setCurrentRecommendation(null);
+
+    const prompt = `
+      You are an autonomous dietary assistant. The user wants you to tell them EXACTLY what to order from a popular, ubiquitous fast-casual restaurant chain (e.g., Chipotle, CAVA, Sweetgreen, Panera, Chick-fil-A, Subway) that fits their current macro goals.
+      
+      User Status Today:
+      - Diet Preference: ${profile.dietPreference}
+      - Remaining Calories to hit goal: ${remainingCalories} kcal
+      - Exercise Burned Today: ${fitnessData.caloriesBurned} kcal (Keep this in mind for recovery)
+      - Current Macros Eaten: ${totals.protein}g P, ${totals.carbs}g C, ${totals.fat}g F.
+
+      Suggest ONE specific meal combination from a popular restaurant that gets them close to their remaining calories without going over too much.
+    `;
+
+    try {
+      const payload = {
+        contents: [{ parts: [{ text: prompt }] }],
+        systemInstruction: { parts: [{ text: "You are an autonomous food ordering AI. You must return only valid JSON." }] },
+        generationConfig: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: "OBJECT",
+            properties: {
+              restaurant: { type: "STRING", description: "Name of the popular restaurant chain" },
+              mealName: { type: "STRING", description: "Name of the dish" },
+              orderInstructions: { type: "STRING", description: "Exact words the user should say to the cashier to order this specific combination" },
+              calories: { type: "NUMBER" },
+              protein: { type: "NUMBER" },
+              carbs: { type: "NUMBER" },
+              fat: { type: "NUMBER" },
+              estimatedPrice: { type: "STRING", description: "Estimated price like '$12.50'" },
+              reasoning: { type: "STRING", description: "Short explanation of why this fits their current goals and exercise level today." }
+            },
+            required: ["restaurant", "mealName", "orderInstructions", "calories", "protein", "carbs", "fat", "estimatedPrice", "reasoning"]
+          }
+        }
+      };
+
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+      
+      const data = await fetchWithRetry(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (text) {
+        setCurrentRecommendation(JSON.parse(text));
+      } else {
+        throw new Error("No response generated");
+      }
+    } catch (err) {
+      setAiError("Failed to generate a meal. Please try again.");
+      console.error(err);
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  // --- UI Components ---
+  const ProgressBar = ({ label, current, max, colorClass }) => {
+    const percentage = Math.min(100, Math.max(0, (current / max) * 100)) || 0;
+    return (
+      <div className="mb-4">
+        <div className="flex justify-between text-xs mb-1">
+          <span className="font-medium text-slate-700 dark:text-slate-300">{label}</span>
+          <span className="text-slate-500">{current} / {max}</span>
+        </div>
+        <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5">
+          <div className={`h-1.5 rounded-full ${colorClass}`} style={{ width: `${percentage}%` }}></div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans">
+      
+      {/* Header */}
+      <header className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="bg-indigo-600 p-2 rounded-lg text-white">
+              <Brain size={20} />
+            </div>
+            <h1 className="text-xl font-bold tracking-tight">AutoDine AI</h1>
+          </div>
+          <div className="flex space-x-2">
+            {['dashboard', 'history'].map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
+                  activeTab === tab 
+                    ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400' 
+                    : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'
+                }`}
+              >
+                {tab === 'dashboard' ? 'What to Eat' : 'History'}
+              </button>
+            ))}
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
+        
+        {/* --- AUTONOMOUS DASHBOARD --- */}
+        {activeTab === 'dashboard' && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            
+            {/* Status Bar */}
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1 bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-200 dark:border-slate-700">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm font-medium text-slate-500">Remaining Today</span>
+                  <span className="text-2xl font-black text-indigo-600 dark:text-indigo-400">{remainingCalories > 0 ? remainingCalories : 0} <span className="text-sm font-medium text-slate-400">kcal</span></span>
+                </div>
+                <div className="grid grid-cols-3 gap-2 mt-4">
+                  <ProgressBar label="Pro" current={totals.protein} max={profile.goalProtein} colorClass="bg-red-500" />
+                  <ProgressBar label="Carb" current={totals.carbs} max={profile.goalCarbs} colorClass="bg-yellow-500" />
+                  <ProgressBar label="Fat" current={totals.fat} max={profile.goalFat} colorClass="bg-emerald-500" />
+                </div>
+              </div>
+
+              <div className="sm:w-48 bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col justify-center items-center relative overflow-hidden">
+                <button onClick={syncSmartWatch} className="absolute top-3 right-3 text-slate-400 hover:text-indigo-500">
+                  <RefreshCw size={14} />
+                </button>
+                <Activity className="text-rose-500 mb-2" size={24} />
+                <span className="text-2xl font-bold">{fitnessData.caloriesBurned}</span>
+                <span className="text-xs text-slate-500 text-center mt-1">Active Cals Burned</span>
+              </div>
+            </div>
+
+            {/* Autonomous Recommender */}
+            {!currentRecommendation ? (
+              <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-3xl p-8 sm:p-12 text-center shadow-xl relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
+                  <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+                    <defs><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" strokeWidth="1"/></pattern></defs>
+                    <rect width="100%" height="100%" fill="url(#grid)" />
+                  </svg>
+                </div>
+                
+                <Utensils size={48} className="mx-auto text-white mb-6 opacity-90" />
+                <h2 className="text-3xl font-black text-white mb-4 tracking-tight">Hungry?</h2>
+                <p className="text-indigo-100 mb-8 max-w-md mx-auto">
+                  Let AI find a meal at a nearby restaurant that perfectly fits your remaining macros for today.
+                </p>
+                
+                <button 
+                  onClick={generateMealPlan}
+                  disabled={aiLoading}
+                  className="bg-white text-indigo-600 hover:bg-indigo-50 font-bold py-4 px-8 rounded-2xl transition-transform transform hover:scale-105 active:scale-95 shadow-lg w-full sm:w-auto disabled:opacity-80 disabled:cursor-not-allowed flex justify-center items-center gap-2"
+                >
+                  {aiLoading ? <><RefreshCw className="animate-spin" size={20}/> Finding your meal...</> : "Tell Me What To Eat"}
+                </button>
+                {aiError && <p className="text-red-200 mt-4 text-sm">{aiError}</p>}
+              </div>
+            ) : (
+              <div className="bg-white dark:bg-slate-800 rounded-3xl overflow-hidden shadow-xl border border-slate-200 dark:border-slate-700 animate-in slide-in-from-bottom-4 duration-500">
+                <div className="bg-indigo-600 p-6 text-white flex justify-between items-start">
+                  <div>
+                    <div className="flex items-center gap-2 text-indigo-200 text-sm font-semibold uppercase tracking-wider mb-1">
+                      <MapPin size={16} /> {currentRecommendation.restaurant}
+                    </div>
+                    <h2 className="text-2xl font-bold">{currentRecommendation.mealName}</h2>
+                  </div>
+                  <div className="bg-indigo-500/50 px-3 py-1 rounded-lg flex items-center gap-1 font-semibold">
+                    <DollarSign size={16} /> {currentRecommendation.estimatedPrice.replace('$', '')}
+                  </div>
+                </div>
+
+                <div className="p-6 sm:p-8">
+                  <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl p-5 mb-6 border border-slate-100 dark:border-slate-800">
+                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+                      <Info size={14}/> How to order
+                    </h3>
+                    <p className="text-lg font-medium text-slate-800 dark:text-slate-200 leading-relaxed">
+                      "{currentRecommendation.orderInstructions}"
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-4 gap-2 mb-8 text-center">
+                    <div className="bg-slate-100 dark:bg-slate-700/50 p-3 rounded-xl">
+                      <p className="text-xs text-slate-500 mb-1">Cals</p>
+                      <p className="font-bold text-lg">{currentRecommendation.calories}</p>
+                    </div>
+                    <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-xl text-red-700 dark:text-red-400">
+                      <p className="text-xs opacity-70 mb-1">Pro</p>
+                      <p className="font-bold text-lg">{currentRecommendation.protein}g</p>
+                    </div>
+                    <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-xl text-yellow-700 dark:text-yellow-400">
+                      <p className="text-xs opacity-70 mb-1">Carb</p>
+                      <p className="font-bold text-lg">{currentRecommendation.carbs}g</p>
+                    </div>
+                    <div className="bg-emerald-50 dark:bg-emerald-900/20 p-3 rounded-xl text-emerald-700 dark:text-emerald-400">
+                      <p className="text-xs opacity-70 mb-1">Fat</p>
+                      <p className="font-bold text-lg">{currentRecommendation.fat}g</p>
+                    </div>
+                  </div>
+
+                  <p className="text-sm text-slate-600 dark:text-slate-400 italic mb-8 border-l-2 border-indigo-200 dark:border-indigo-800 pl-4">
+                    Why this meal? {currentRecommendation.reasoning}
+                  </p>
+
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <button 
+                      onClick={logRecommendedMeal}
+                      className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl flex justify-center items-center gap-2 transition-colors shadow-md"
+                    >
+                      <CheckCircle2 size={20} /> Yes, I Ate This (Log It)
+                    </button>
+                    <button 
+                      onClick={generateMealPlan}
+                      disabled={aiLoading}
+                      className="sm:w-auto px-6 py-4 rounded-xl font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors flex justify-center items-center gap-2"
+                    >
+                      {aiLoading ? <RefreshCw className="animate-spin" size={20}/> : "Try Another"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* --- HISTORY TAB --- */}
+        {activeTab === 'history' && (
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-200 dark:border-slate-700 animate-in fade-in duration-300">
+             <h2 className="text-xl font-bold mb-6">Your Meal History</h2>
+             {meals.length === 0 ? (
+               <div className="text-center py-12 text-slate-400 flex flex-col items-center">
+                 <Utensils size={40} className="mb-4 opacity-20" />
+                 <p>Nothing logged yet. Let the AI pick your first meal!</p>
+               </div>
+             ) : (
+               <div className="space-y-4">
+                 {meals.map(meal => (
+                   <div key={meal.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-slate-50 dark:bg-slate-700/30 rounded-2xl border border-slate-100 dark:border-slate-700 gap-4">
+                     <div className="flex-1">
+                       <p className="font-bold text-slate-800 dark:text-slate-200">{meal.name}</p>
+                       <div className="flex items-center gap-3 mt-1 text-xs text-slate-500 font-medium">
+                         <span className="bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 px-2 py-0.5 rounded">Auto-Logged</span>
+                         {meal.price && <span>{meal.price}</span>}
+                       </div>
+                     </div>
+                     <div className="flex items-center gap-4 sm:gap-6 justify-between sm:justify-end border-t sm:border-t-0 border-slate-200 dark:border-slate-600 pt-3 sm:pt-0">
+                       <div className="text-left sm:text-right flex gap-4 sm:block">
+                         <p className="font-black text-indigo-600 dark:text-indigo-400">{meal.calories} kcal</p>
+                         <p className="text-xs text-slate-500 font-medium mt-0.5">
+                           <span className="text-red-500">{meal.protein}g P</span> • <span className="text-yellow-500">{meal.carbs}g C</span> • <span className="text-emerald-500">{meal.fat}g F</span>
+                         </p>
+                       </div>
+                       <button onClick={() => handleDeleteMeal(meal.id)} className="text-slate-400 hover:text-red-500 transition-colors p-2 bg-white dark:bg-slate-800 rounded-full shadow-sm">
+                         <Trash2 size={16}/>
+                       </button>
+                     </div>
+                   </div>
+                 ))}
+               </div>
+             )}
+          </div>
+        )}
+
+      </main>
+    </div>
+  );
+}
