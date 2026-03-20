@@ -187,8 +187,11 @@
         const goalProtein = Math.round((goalCalories * 0.30) / 4);
         const goalCarbs = Math.round((goalCalories * 0.40) / 4);
         const goalFat = Math.round((goalCalories * 0.30) / 9);
+        const goalFiber = 30; // Recommended daily fiber (g)
+        const goalSodium = 2300; // Recommended max daily sodium (mg)
+        const goalCaffeine = 400; // Safe daily caffeine limit (mg)
 
-        return { calories: goalCalories, protein: goalProtein, carbs: goalCarbs, fat: goalFat };
+        return { calories: goalCalories, protein: goalProtein, carbs: goalCarbs, fat: goalFat, fiber: goalFiber, sodium: goalSodium, caffeine: goalCaffeine };
       }, [profile]);
 
       const totals = (meals || []).reduce((acc, meal) => ({
@@ -196,7 +199,10 @@
         protein: acc.protein + (Number(meal?.protein) || 0),
         carbs: acc.carbs + (Number(meal?.carbs) || 0),
         fat: acc.fat + (Number(meal?.fat) || 0),
-      }), { calories: 0, protein: 0, carbs: 0, fat: 0 });
+        fiber: acc.fiber + (Number(meal?.fiber) || 0),
+        sodium: acc.sodium + (Number(meal?.sodium) || 0),
+        caffeine: acc.caffeine + (Number(meal?.caffeine) || 0),
+      }), { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sodium: 0, caffeine: 0 });
 
       const remainingCalories = Math.max(0, goals.calories - totals.calories);
 
@@ -237,6 +243,9 @@
           protein: currentRecommendation.protein,
           carbs: currentRecommendation.carbs,
           fat: currentRecommendation.fat,
+          fiber: currentRecommendation.fiber,
+          sodium: currentRecommendation.sodium,
+          caffeine: currentRecommendation.caffeine,
         }, ...(prevMeals || [])]);
         setCurrentRecommendation(null);
       };
@@ -286,7 +295,7 @@
           User Profile:
           - Eaten: ${totals.calories} / ${goals.calories} kcal today.
           - Goal: ${profile?.goal || 'maintain'}
-          - Diet Preference: ${profile?.dietPreference || 'None'}
+          - Diet Preference: ${profile?.dietPreference || 'Any'}
           - ALLERGIES: ${profile?.allergies || 'None'}. CRITICAL: DO NOT SUGGEST ANY INGREDIENT LISTED HERE! THIS IS LIFE OR DEATH.
           - Location Context: ${locationContext}
           
@@ -294,7 +303,7 @@
           - Desired Price Range: ${priceLabel}
           - Health/Indulgence Focus: ${healthLabel}
           
-          Provide the restaurant, exact order, macros, and a "hype text" explaining why this meal perfectly matches their Tuner constraints, hits their macros, and avoids their allergies.
+          Provide the restaurant, exact order, macros (including fiber in grams, sodium in mg, and caffeine in mg), and a "hype text" explaining why this meal perfectly matches their Tuner constraints, hits their macros, and avoids their allergies.
         `;
 
         try {
@@ -313,10 +322,13 @@
                   protein: { type: "NUMBER" },
                   carbs: { type: "NUMBER" },
                   fat: { type: "NUMBER" },
+                  fiber: { type: "NUMBER", description: "Fiber content in grams" },
+                  sodium: { type: "NUMBER", description: "Sodium content in milligrams" },
+                  caffeine: { type: "NUMBER", description: "Caffeine content in milligrams (0 if none)" },
                   estimatedPrice: { type: "STRING" },
                   hypeText: { type: "STRING", description: "Enthusiastic text explaining why this meal is perfect for their goals and safely avoids their allergies." }
                 },
-                required: ["restaurant", "mealName", "orderInstructions", "calories", "protein", "carbs", "fat", "estimatedPrice", "hypeText"]
+                required: ["restaurant", "mealName", "orderInstructions", "calories", "protein", "carbs", "fat", "fiber", "sodium", "caffeine", "estimatedPrice", "hypeText"]
               }
             }
           };
@@ -417,7 +429,7 @@
                   <div className="grid grid-cols-2 gap-y-3 gap-x-4 text-xs sm:text-sm font-bold uppercase">
                     <div><span className="text-slate-500">Class:</span> <span className="text-white">{profile?.goal === 'lose' ? 'Cut' : profile?.goal === 'build' ? 'Bulk' : 'Maintain'}</span></div>
                     <div><span className="text-slate-500">Weight:</span> <span className="text-white">{profile?.weight || 160} lbs</span></div>
-                    <div><span className="text-slate-500">Buffs (Diet):</span> <span className="text-cyan-400">{profile?.dietPreference || 'ANY'}</span></div>
+                    <div><span className="text-slate-500">Buffs (Diet):</span> <span className="text-cyan-400">{profile?.dietPreference || 'Any'}</span></div>
                     <div className="flex items-start gap-1">
                       <span className="text-slate-500">Debuffs:</span> 
                       <span className={profile?.allergies ? 'text-red-400 flex items-center gap-1' : 'text-slate-400'}>
@@ -442,18 +454,30 @@
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
                     <div className="border-2 border-black bg-indigo-100 p-2 text-center">
-                      <p className="text-xs font-black uppercase">PRO</p>
-                      <p className="font-bold text-sm">{totals.protein}/{goals.protein}g</p>
+                      <p className="text-[10px] font-black uppercase">PRO</p>
+                      <p className="font-bold text-xs sm:text-sm">{totals.protein}/{goals.protein}g</p>
                     </div>
                     <div className="border-2 border-black bg-yellow-100 p-2 text-center">
-                      <p className="text-xs font-black uppercase">CRB</p>
-                      <p className="font-bold text-sm">{totals.carbs}/{goals.carbs}g</p>
+                      <p className="text-[10px] font-black uppercase">CRB</p>
+                      <p className="font-bold text-xs sm:text-sm">{totals.carbs}/{goals.carbs}g</p>
                     </div>
                     <div className="border-2 border-black bg-lime-100 p-2 text-center">
-                      <p className="text-xs font-black uppercase">FAT</p>
-                      <p className="font-bold text-sm">{totals.fat}/{goals.fat}g</p>
+                      <p className="text-[10px] font-black uppercase">FAT</p>
+                      <p className="font-bold text-xs sm:text-sm">{totals.fat}/{goals.fat}g</p>
+                    </div>
+                    <div className="border-2 border-black bg-orange-100 p-2 text-center">
+                      <p className="text-[10px] font-black uppercase">FBR</p>
+                      <p className="font-bold text-xs sm:text-sm">{totals.fiber}/{goals.fiber}g</p>
+                    </div>
+                    <div className="border-2 border-black bg-pink-100 p-2 text-center">
+                      <p className="text-[10px] font-black uppercase">SOD</p>
+                      <p className="font-bold text-xs sm:text-sm">{totals.sodium}/{goals.sodium}mg</p>
+                    </div>
+                    <div className="border-2 border-black bg-cyan-100 p-2 text-center">
+                      <p className="text-[10px] font-black uppercase">CAF</p>
+                      <p className="font-bold text-xs sm:text-sm">{totals.caffeine}/{goals.caffeine}mg</p>
                     </div>
                   </div>
                 </div>
@@ -485,7 +509,7 @@
                     </div>
 
                     <div className="bg-cyan-400 border-4 border-black retro-shadow p-8 text-center">
-                      <h2 className="text-2xl font-black mb-4 uppercase">Feed Me AI</h2>
+                      <h2 className="text-2xl font-black mb-4 uppercase">Next Meal</h2>
                       <p className="font-bold text-sm mb-8 text-black/80">Scanning local coordinates and bypassing allergies to find optimal fuel.</p>
                       <button 
                         onClick={generateMealPlan}
@@ -520,11 +544,14 @@
                         <p className="font-bold italic">"{currentRecommendation.orderInstructions}"</p>
                       </div>
                       
-                      <div className="grid grid-cols-4 gap-2 mb-6 text-center">
-                         <div className="border-2 border-black bg-slate-100"><p className="text-[10px] font-black border-b-2 border-black bg-slate-200">KCAL</p><p className="font-black py-1">{currentRecommendation.calories}</p></div>
-                         <div className="border-2 border-black bg-indigo-100"><p className="text-[10px] font-black border-b-2 border-black bg-indigo-200">PRO</p><p className="font-black py-1">{currentRecommendation.protein}</p></div>
-                         <div className="border-2 border-black bg-cyan-100"><p className="text-[10px] font-black border-b-2 border-black bg-cyan-200">CRB</p><p className="font-black py-1">{currentRecommendation.carbs}</p></div>
-                         <div className="border-2 border-black bg-lime-100"><p className="text-[10px] font-black border-b-2 border-black bg-lime-200">FAT</p><p className="font-black py-1">{currentRecommendation.fat}</p></div>
+                      <div className="grid grid-cols-4 sm:grid-cols-7 gap-2 mb-6 text-center">
+                         <div className="border-2 border-black bg-slate-100 col-span-4 sm:col-span-1"><p className="text-[10px] font-black border-b-2 border-black bg-slate-200">KCAL</p><p className="font-black py-1 text-sm">{currentRecommendation.calories}</p></div>
+                         <div className="border-2 border-black bg-indigo-100"><p className="text-[10px] font-black border-b-2 border-black bg-indigo-200">PRO</p><p className="font-black py-1 text-sm">{currentRecommendation.protein}</p></div>
+                         <div className="border-2 border-black bg-cyan-100"><p className="text-[10px] font-black border-b-2 border-black bg-cyan-200">CRB</p><p className="font-black py-1 text-sm">{currentRecommendation.carbs}</p></div>
+                         <div className="border-2 border-black bg-lime-100"><p className="text-[10px] font-black border-b-2 border-black bg-lime-200">FAT</p><p className="font-black py-1 text-sm">{currentRecommendation.fat}</p></div>
+                         <div className="border-2 border-black bg-orange-100"><p className="text-[10px] font-black border-b-2 border-black bg-orange-200">FBR</p><p className="font-black py-1 text-sm">{currentRecommendation.fiber}</p></div>
+                         <div className="border-2 border-black bg-pink-100"><p className="text-[10px] font-black border-b-2 border-black bg-pink-200">SOD</p><p className="font-black py-1 text-sm">{currentRecommendation.sodium}</p></div>
+                         <div className="border-2 border-black bg-blue-100"><p className="text-[10px] font-black border-b-2 border-black bg-blue-200">CAF</p><p className="font-black py-1 text-sm">{currentRecommendation.caffeine}</p></div>
                       </div>
 
                       <div className="bg-black text-white p-4 border-4 border-white outline outline-4 outline-black mb-6">
@@ -680,9 +707,19 @@
                       <p className="text-[10px] font-bold mt-1 text-red-600">AI will be strictly forbidden from suggesting these.</p>
                     </div>
                     
-                    <div>
+                    <div className="mt-6">
                       <label className="block text-xs font-black uppercase mb-1">Diet Preference (Buffs)</label>
-                      <input type="text" value={profile?.dietPreference || ''} onChange={e => setProfile({...profile, dietPreference: e.target.value})} placeholder="e.g. Any, Vegan, Keto, Paleo" className="w-full border-4 border-black p-2 font-bold bg-slate-50 outline-none focus:bg-yellow-100" />
+                      <select value={profile?.dietPreference || 'Any'} onChange={e => setProfile({...profile, dietPreference: e.target.value})} className="w-full border-4 border-black p-3 font-bold bg-slate-50 outline-none focus:bg-yellow-100">
+                        <option value="Any">Any / No Restriction</option>
+                        <option value="Vegetarian">Vegetarian</option>
+                        <option value="Vegan">Vegan</option>
+                        <option value="Pescatarian">Pescatarian</option>
+                        <option value="Keto">Keto</option>
+                        <option value="Paleo">Paleo</option>
+                        <option value="Mediterranean">Mediterranean</option>
+                        <option value="Gluten-Free">Gluten-Free</option>
+                        <option value="Dairy-Free">Dairy-Free</option>
+                      </select>
                     </div>
                   </div>
 
