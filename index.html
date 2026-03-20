@@ -168,6 +168,16 @@
 
       const remainingCalories = Math.max(0, goals.calories - totals.calories);
 
+      const getCalorieMessage = (eaten, goal) => {
+        const ratio = eaten / goal;
+        if (ratio === 0) return "Awaiting first meal data...";
+        if (ratio < 0.5) return "Fueling up! Keep going.";
+        if (ratio < 0.8) return "On track! Stay focused.";
+        if (ratio <= 1.0) return "Approaching capacity! Eat clean.";
+        if (ratio < 1.2) return "WARNING: Chill out on the snacking!";
+        return "OVERLOAD: Time to go hit the gym! 🏋️‍♂️";
+      };
+
       // --- Handlers ---
       const saveApiKey = (e) => {
         e.preventDefault();
@@ -181,16 +191,20 @@
         setApiKey("");
       };
 
+      const handleDeleteMeal = (identifier) => {
+        setMeals(prevMeals => prevMeals.filter(m => (m.id || m.name) !== identifier));
+      };
+
       const logRecommendedMeal = () => {
         if (!currentRecommendation) return;
-        setMeals([{
-          id: Date.now(),
+        setMeals(prevMeals => [{
+          id: crypto.randomUUID ? crypto.randomUUID() : Date.now() + Math.random(),
           name: `${currentRecommendation.restaurant}: ${currentRecommendation.mealName}`,
           calories: currentRecommendation.calories,
           protein: currentRecommendation.protein,
           carbs: currentRecommendation.carbs,
           fat: currentRecommendation.fat,
-        }, ...meals]);
+        }, ...prevMeals]);
         setCurrentRecommendation(null);
       };
 
@@ -238,7 +252,7 @@
           CRITICAL: VARY YOUR RECOMMENDATIONS widely! Include diverse cuisines (Mediterranean, Sushi, healthy Thai, Indian, local health cafes, upscale grills, Nando's, etc.). DO NOT default to Chipotle.
           
           User Profile:
-          - Needs: ${remainingCalories} kcal left today.
+          - Eaten: ${totals.calories} / ${goals.calories} kcal today.
           - Goal: ${profile.goal}
           - Diet Preference: ${profile.dietPreference}
           - ALLERGIES: ${profile.allergies || 'None'}. CRITICAL: DO NOT SUGGEST ANY INGREDIENT LISTED HERE! THIS IS LIFE OR DEATH.
@@ -384,9 +398,17 @@
 
                 {/* Stats Screen */}
                 <div className="bg-white border-4 border-black retro-shadow p-6">
-                  <div className="flex justify-between items-end border-b-4 border-black pb-4 mb-4">
-                    <h2 className="text-sm font-black uppercase">Fuel Remaining</h2>
-                    <span className="text-4xl font-black text-indigo-600">{remainingCalories}</span>
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b-4 border-black pb-4 mb-4 gap-2">
+                    <div>
+                      <h2 className="text-sm font-black uppercase">Calories Consumed</h2>
+                      <p className={`text-xs font-bold mt-1 ${totals.calories > goals.calories ? 'text-red-500 animate-pulse' : 'text-slate-500'}`}>
+                        {getCalorieMessage(totals.calories, goals.calories)}
+                      </p>
+                    </div>
+                    <div className="text-left sm:text-right">
+                      <span className={`text-4xl font-black ${totals.calories > goals.calories ? 'text-red-600' : 'text-indigo-600'}`}>{totals.calories}</span>
+                      <span className="text-sm font-black text-slate-400"> / {goals.calories} kcal</span>
+                    </div>
                   </div>
                   
                   <div className="grid grid-cols-3 gap-4">
@@ -527,15 +549,15 @@
                     <p className="font-black uppercase">NO DATA FOUND.</p>
                   </div>
                 ) : (
-                  meals.map(meal => (
-                    <div key={meal.id} className="bg-white border-4 border-black retro-shadow p-4 flex justify-between items-center">
+                  meals.map((meal, idx) => (
+                    <div key={meal.id || idx} className="bg-white border-4 border-black retro-shadow p-4 flex justify-between items-center">
                       <div>
                         <p className="font-black uppercase text-lg leading-tight">{meal.name}</p>
                         <p className="text-xs font-bold mt-1 bg-yellow-200 inline-block px-2 border-2 border-black">
                           {meal.calories} KCAL
                         </p>
                       </div>
-                      <button onClick={() => handleDeleteMeal(meal.id)} className="bg-red-400 text-white border-2 border-black p-2 retro-btn transition-all"><Trash2 size={20}/></button>
+                      <button onClick={() => handleDeleteMeal(meal.id || meal.name)} className="bg-red-400 text-white border-2 border-black p-2 retro-btn transition-all"><Trash2 size={20}/></button>
                     </div>
                   ))
                 )}
