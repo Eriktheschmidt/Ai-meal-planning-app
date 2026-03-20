@@ -82,6 +82,9 @@
     const Book = ({size=24, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="square" strokeLinejoin="miter" className={className}><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"></path></svg>;
     const Sparkles = ({size=24, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="square" strokeLinejoin="miter" className={className}><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"></path></svg>;
     const ShieldAlert = ({size=24, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="square" strokeLinejoin="miter" className={className}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="M12 8v4"></path><path d="M12 16h.01"></path></svg>;
+    const Target = ({size=24, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="square" strokeLinejoin="miter" className={className}><circle cx="12" cy="12" r="10"></circle><line x1="22" y1="12" x2="18" y2="12"></line><line x1="6" y1="12" x2="2" y2="12"></line><line x1="12" y1="6" x2="12" y2="2"></line><line x1="12" y1="22" x2="12" y2="18"></line></svg>;
+    const MapIcon = ({size=24, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="square" strokeLinejoin="miter" className={className}><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"></polygon><line x1="9" x2="9" y1="3" y2="18"></line><line x1="15" x2="15" y1="6" y2="21"></line></svg>;
+    const Navigation = ({size=24, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="square" strokeLinejoin="miter" className={className}><polygon points="3 11 22 2 13 21 11 13 3 11"></polygon></svg>;
 
     // Fetch with Retry
     const fetchWithRetry = async (url, options, retries = 3) => {
@@ -130,6 +133,7 @@
       const [currentRecommendation, setCurrentRecommendation] = useState(null);
       const [aiError, setAiError] = useState('');
       const [userLocation, setUserLocation] = useState(null);
+      const [locationStatus, setLocationStatus] = useState('idle');
 
       useEffect(() => { localStorage.setItem('nutrisync_meals', JSON.stringify(meals)); }, [meals]);
       useEffect(() => { localStorage.setItem('nutrisync_profile_v2', JSON.stringify(profile)); }, [profile]);
@@ -202,6 +206,7 @@
         }
 
         setAiLoading(true);
+        setLocationStatus('locating');
         setAiError('');
         setCurrentRecommendation(null);
 
@@ -212,11 +217,18 @@
           });
           setUserLocation({ lat: pos.coords.latitude, lon: pos.coords.longitude });
           locationContext = `The user is currently at coordinates: Latitude ${pos.coords.latitude}, Longitude ${pos.coords.longitude}. Find a real restaurant near these coordinates.`;
+          
+          // Flash the "Position Acquired" state for 1.2 seconds for dramatic effect
+          setLocationStatus('acquired');
+          await new Promise(res => setTimeout(res, 1200)); 
         } catch (err) {
           console.warn("Location not provided.");
           setUserLocation(null);
+          setLocationStatus('error');
+          await new Promise(res => setTimeout(res, 1000));
         }
 
+        setLocationStatus('processing');
         const priceLabel = priceLevel === '1' ? 'Cheap/Fast Food ($)' : priceLevel === '2' ? 'Moderate/Fast Casual ($$)' : 'Expensive/Sit-down ($$$)';
         const healthLabel = healthLevel === '1' ? 'Indulgent/Cheat Meal (Prioritize taste and calories over macros)' : healthLevel === '2' ? 'Balanced (Good macros, decent taste)' : 'Ultra Clean/Super Healthy (Prioritize micronutrients and perfect macros)';
 
@@ -427,7 +439,11 @@
                         disabled={aiLoading}
                         className="bg-yellow-400 border-4 border-black font-black py-4 px-8 w-full uppercase retro-shadow-sm retro-btn transition-all flex justify-center items-center gap-2 disabled:opacity-50"
                       >
-                        {aiLoading ? <><RefreshCw size={20} className="animate-spin" /> Processing...</> : "Generate Meal"}
+                        {locationStatus === 'locating' ? <><RefreshCw size={20} className="animate-spin" /> Scanning Satellites...</> :
+                         locationStatus === 'acquired' ? <><Target size={20} className="text-lime-700" /> Position Acquired!</> :
+                         locationStatus === 'error' ? <><RefreshCw size={20} className="animate-spin" /> Location Bypassed...</> :
+                         aiLoading ? <><RefreshCw size={20} className="animate-spin" /> Processing Data...</> : 
+                         "Generate Meal"}
                       </button>
                       {aiError && <p className="mt-4 bg-black text-red-400 p-3 font-bold text-xs uppercase border-2 border-red-500">{aiError}</p>}
                     </div>
@@ -461,6 +477,31 @@
                       <div className="bg-black text-white p-4 border-4 border-white outline outline-4 outline-black mb-6">
                         <p className="text-xs font-black uppercase mb-2 text-cyan-400">AI Analysis:</p>
                         <p className="text-sm font-bold leading-relaxed">{currentRecommendation.hypeText}</p>
+                      </div>
+
+                      {/* Map & Directions Section */}
+                      <div className="bg-slate-200 border-4 border-black p-4 mb-6">
+                        <h3 className="text-sm font-black uppercase mb-3 flex items-center gap-2 text-indigo-900">
+                          <MapIcon size={18}/> Target Location
+                        </h3>
+                        <div className="border-4 border-black mb-4 retro-shadow-sm bg-white">
+                          <iframe 
+                            width="100%" 
+                            height="200" 
+                            style={{ border: 0, display: 'block' }} 
+                            loading="lazy" 
+                            allowFullScreen 
+                            src={`https://maps.google.com/maps?q=${encodeURIComponent(currentRecommendation.restaurant)}${userLocation ? `+near+${userLocation.lat},${userLocation.lon}` : ''}&t=&z=14&ie=UTF8&iwloc=&output=embed`}
+                          ></iframe>
+                        </div>
+                        <a 
+                          href={`https://www.google.com/maps/dir/?api=1${userLocation ? `&origin=${userLocation.lat},${userLocation.lon}` : ''}&destination=${encodeURIComponent(currentRecommendation.restaurant)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="w-full bg-cyan-400 border-4 border-black font-black text-black uppercase py-3 retro-shadow-sm retro-btn transition-all flex justify-center items-center gap-2 hover:bg-cyan-300"
+                        >
+                          <Navigation size={20}/> Initiate Route
+                        </a>
                       </div>
 
                       <div className="flex flex-col sm:flex-row gap-4">
